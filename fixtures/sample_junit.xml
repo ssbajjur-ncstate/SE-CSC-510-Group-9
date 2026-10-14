@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<testsuite
+    name="pytest"
+    tests="5"
+    failures="2"
+    time="12.4">
+
+    <testcase
+        classname="tests.test_checkout"
+        name="test_checkout_success"
+        time="3.2" />
+
+    <testcase
+        classname="tests.test_checkout"
+        name="test_checkout_invalid_card"
+        time="2.8">
+
+        <failure message="AssertionError">
+            Expected payment rejection but checkout succeeded
+        </failure>
+
+    </testcase>
+
+    <testcase
+        classname="tests.test_login"
+        name="test_login_success"
+        time="1.1" />
+
+    <testcase
+        classname="tests.test_cart"
+        name="test_add_to_cart"
+        time="2.0" />
+
+    <testcase
+        classname="tests.test_payment"
+        name="test_payment_timeout"
+        time="3.3">
+
+        <failure message="TimeoutError">
+            Payment service timed out
+        </failure>
+
+    </testcase>
+
+</testsuite>
