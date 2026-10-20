@@ -1,3 +1,9 @@
-# Commit 1: skeleton
-git add docs/eval-protocol.md
-git commit -m "docs(eval): protocol skeleton (refs #17)"
+# TestBudget evaluation protocol
+
+## 1. Hypothesis
+## 2. Baselines
+## 3. Metrics
+## 4. Temporal split
+## 5. Failing runs and flakes
+## 6. Failure conditions
+## 7. Data sources
