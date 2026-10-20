@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "testbudget"
+version = "0.1.0"
+description = "Choose which existing tests run on a pull request, in what order, and for how long, from the repository's own CI history."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "CSC 510 Group 9" }]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "hypothesis>=6.100",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+testbudget = "testbudget.cli:main"
+
+[project.urls]
+Repository = "https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9"
+
+[tool.setuptools.packages.find]
+include = ["testbudget*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+
+[tool.coverage.run]
+source = ["testbudget"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = ["if __name__ == .__main__.:"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["testbudget"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["testbudget"]
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+no_implicit_optional = true
