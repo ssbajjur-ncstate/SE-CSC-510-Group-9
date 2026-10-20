@@ -17,22 +17,29 @@ The current vertical slice supports:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -e ".[dev]"
 ```
 
-If requirements.txt is not used on your machine, install pytest directly for development:
+This installs TestBudget in editable mode with the development tools (pytest, pytest-cov, Hypothesis, ruff, mypy) and puts the `testbudget` command on your path. On Windows, activate with `.venv\Scripts\activate` instead.
+
+Check the install:
 
 ```bash
-python -m pip install pytest
+testbudget --help
 ```
 
-## Run Tests
+## Run Tests and Checks
 
 ```bash
 python -m pytest -q
+python -m pytest --cov
+ruff check .
+mypy testbudget
 ```
 
 ## CLI Workflow
+
+After installing, `testbudget <command>` is equivalent to `python -m testbudget.cli <command>`.
 
 ### 1. Initialize local history
 
