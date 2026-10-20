@@ -42,3 +42,7 @@ The hypothesis fails if any of these hold on the committed history:
 A fail is reported in the M0 issue with the number, the commit it was computed at, and one decision: persevere, re-plan or descope.
 
 ## 7. Data sources
+
+- MealSlot CI history, back-filled from GitHub Actions. Most artifacts will have expired, so most runs are rebuilt by checking out each commit and running the suite.
+- One public pytest repository chosen for frequent CI and real test failures.
+- Any planted failures are labelled synthetic and reported separately from real ones.
