@@ -16,6 +16,13 @@ TestBudget is compared with these orderings, all given the same history and the 
 4. Import-only: tests whose files import a changed file, with no history.
 
 ## 3. Metrics
+
+- Catch rate at 30% of suite time: share of failing runs where a failing test falls inside the selected set, with selected tests totalling at most 30% of the full suite duration.
+- APFDc: cost-aware average percentage of faults detected, where each test costs its duration.
+- Time to first failure: seconds of test time before the first failing test runs in a failing run.
+
+Each metric is reported per method and per risk level.
+
 ## 4. Temporal split
 ## 5. Failing runs and flakes
 ## 6. Failure conditions
