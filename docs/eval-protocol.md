@@ -28,5 +28,8 @@ Each metric is reported per method and per risk level.
 Runs are replayed in the order they happened. The plan for run N uses only runs 1 to N-1: their results, their changed files and the skip debt they left. Nothing from run N or later is read. A test enforces this.
 
 ## 5. Failing runs and flakes
+
+A failing run is a run where at least one test has status failed or error after retries. A failure is flaky, and is dropped from the failing set, if the same test passes on retry or passes on the same SHA in another attempt. Until the flake filter module exists, this one-line rule is used. Runs that fail on installation or collection are recorded but not counted as test failures.
+
 ## 6. Failure conditions
 ## 7. Data sources
