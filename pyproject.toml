@@ -35,3 +35,36 @@ Repository = "https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9"
 
 [tool.setuptools.packages.find]
 include = ["testbudget*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+
+[tool.coverage.run]
+source = ["testbudget"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+exclude_also = ["if __name__ == .__main__.:"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["testbudget"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["testbudget"]
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+no_implicit_optional = true
