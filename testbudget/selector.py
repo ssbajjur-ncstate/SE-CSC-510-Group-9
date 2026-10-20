@@ -7,11 +7,11 @@ def select_with_budget(ranked_tests, budget):
     """
     if budget < 0:
         raise ValueError("Budget cannot be negative")
-    
+
     selected = []
     skipped = []
     used_time = 0.0
-    
+
     for test in ranked_tests:
         duration = float(test.get("duration", 0.0))
         if used_time + duration <= budget:
@@ -21,7 +21,7 @@ def select_with_budget(ranked_tests, budget):
             skipped_test = dict(test)
             skipped_test["skip_reason"] = "budget exhausted"
             skipped.append(skipped_test)
-            
+
     return {
         "selected": selected,
         "skipped": skipped,
