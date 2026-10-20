@@ -12,6 +12,7 @@ def load_links(path: str | Path) -> dict[str, list[str]]:
         links: dict[str, list[str]] = json.load(file)
     return links
 
+
 def get_linked_tests(
     changed_files: Iterable[str], links: dict[str, list[str]]
 ) -> set[str]:
@@ -23,6 +24,7 @@ def get_linked_tests(
         for test_name in links.get(changed_file, []):
             linked_tests.add(test_name)
     return linked_tests
+
 
 def rank_tests(
     stats: list[dict[str, Any]],
@@ -90,7 +92,5 @@ def rank_tests(
     # Highest score first.
     # test_name is the secondary sort key so identical inputs
     # always produce the same ordering.
-    ranked.sort(
-        key=lambda test: (-test["score"], test["test_name"])
-    )
+    ranked.sort(key=lambda test: (-test["score"], test["test_name"]))
     return ranked
