@@ -55,7 +55,7 @@ def test_file_that_always_precedes_failures_gets_highest_weight(history):
 
 
 def test_weights_are_shrunk_toward_the_global_prior(history):
-    # Two of four runs fail, so the prior is (2 + 1) / (4 + 2) = 0.5.
+    # Two of four runs fail, so the prior is 2 / 4 = 0.5.
     weights = file_failure_weights(*history)
     assert weights["src/ui.py"] == pytest.approx((1 + 2 * 0.5) / (2 + 2))
     assert weights["src/docs.py"] == pytest.approx((0 + 2 * 0.5) / (1 + 2))
@@ -63,7 +63,7 @@ def test_weights_are_shrunk_toward_the_global_prior(history):
 
 def sparse_failure_history():
     """Twenty runs change src/core.py and two fail; one passing run changes
-    src/new.py. The global prior is (2 + 1) / (21 + 2) = 3 / 23."""
+    src/new.py. The global prior is 2 / 21."""
     runs = [make_run(f"b{i}", ["src/core.py"]) for i in range(20)]
     runs.append(make_run("c0", ["src/new.py"]))
     results = [
@@ -77,8 +77,18 @@ def test_file_touched_once_in_passing_run_has_weight_below_global_prior():
     runs, results = sparse_failure_history()
     weights = file_failure_weights(runs, results)
     prior = global_failure_prior(runs, results)
-    assert prior == pytest.approx(3 / 23)
+    assert prior == pytest.approx(2 / 21)
     assert weights["src/new.py"] < prior
+
+
+def test_file_in_every_failing_run_has_weight_at_least_the_prior():
+    runs, results = sparse_failure_history()
+    weights = file_failure_weights(runs, results)
+    prior = global_failure_prior(runs, results)
+    assert weights["src/core.py"] >= prior
+    assert change_risk(["src/core.py"], weights, prior) >= change_risk(
+        ["src/unseen.py"], weights, prior
+    )
 
 
 def test_file_touched_once_in_passing_run_ranks_below_file_with_failures():
@@ -119,8 +129,8 @@ def test_skipped_results_do_not_count_as_failures(history):
 def test_duplicate_run_records_count_once():
     runs = [make_run("a1", ["src/pay.py"]), make_run("a1", ["src/pay.py"])]
     weights = file_failure_weights(runs, [make_result("a1", "failed")])
-    # One failing run: prior (1 + 1) / (1 + 2) = 2/3, weight (1 + 4/3) / 3.
-    assert weights["src/pay.py"] == pytest.approx(7 / 9)
+    # One failing run: prior 1 / 1 = 1, weight (1 + 2) / (1 + 2).
+    assert weights["src/pay.py"] == pytest.approx(1.0)
 
 
 def test_weights_are_sorted_by_path(history):
@@ -142,8 +152,13 @@ def test_run_missing_sha_raises_key_error():
         file_failure_weights([{"changed_files": ["src/pay.py"]}], [])
 
 
-def test_global_prior_is_smoothed_failing_run_share(history):
-    assert global_failure_prior(*history) == pytest.approx((2 + 1) / (4 + 2))
+def test_global_prior_is_observed_failing_run_share():
+    assert global_failure_prior(*sparse_failure_history()) == pytest.approx(2 / 21)
+
+
+def test_global_prior_without_failures_is_zero():
+    runs = [make_run("a1", ["src/pay.py"])]
+    assert global_failure_prior(runs, [make_result("a1", "passed")]) == 0.0
 
 
 def test_global_prior_of_empty_history_is_one_half():
@@ -152,7 +167,7 @@ def test_global_prior_of_empty_history_is_one_half():
 
 def test_global_prior_ignores_results_without_a_run():
     runs = [make_run("a1", ["src/pay.py"])]
-    assert global_failure_prior(runs, [make_result("zz", "failed")]) == 1 / 3
+    assert global_failure_prior(runs, [make_result("zz", "failed")]) == 0.0
 
 
 def test_change_risk_sums_known_file_weights():
@@ -201,15 +216,18 @@ def test_historical_scores_follow_run_order():
 
 
 def test_quantile_thresholds_split_synthetic_history_into_thirds():
-    # Nine runs that never fail: every file has the same weight, so runs
-    # that change one, two or three files score w, 2w and 3w.
+    # Nine passing runs, each file touched once, so every file has the same
+    # weight w and runs that change one, two or three files score w, 2w, 3w.
+    # One failing run elsewhere keeps the prior, and so w, above zero.
     runs = [
         make_run(f"s{i}", [f"src/m{i}_{j}.py" for j in range(i // 3 + 1)])
         for i in range(9)
     ]
     results = [make_result(run["sha"], "passed") for run in runs]
-    weights = file_failure_weights(runs, results)
-    prior = global_failure_prior(runs, results)
+    history_runs = [*runs, make_run("f0", ["src/other.py"])]
+    history_results = [*results, make_result("f0", "failed")]
+    weights = file_failure_weights(history_runs, history_results)
+    prior = global_failure_prior(history_runs, history_results)
     scores = historical_risk_scores(runs, weights, prior)
 
     thresholds = risk_thresholds(scores)

@@ -25,19 +25,22 @@ def _failing_shas(results: Iterable[Record]) -> set[str]:
 
 def global_failure_prior(runs: Iterable[Record], results: Iterable[Record]) -> float:
     """
-    Return the Laplace-smoothed share of runs with at least one failure.
+    Return the observed share of runs with at least one failure.
 
     Used as the weight of files that have no history, and as the value
-    every file weight is shrunk toward.
+    every file weight is shrunk toward. It is not smoothed, so a file that
+    appears in every failing run never weighs less than an unseen file.
     Args:
         runs: Run records from the history contract.
         results: Result records from the history contract.
     Returns:
-        ``(failing_runs + 1) / (runs + 2)``; 0.5 for an empty history.
+        ``failing_runs / runs`` in [0, 1]; 0.5 for an empty history.
     """
     failing = _failing_shas(results)
     shas = {run["sha"] for run in runs}
-    return (len(shas & failing) + 1) / (len(shas) + 2)
+    if not shas:
+        return 0.5
+    return len(shas & failing) / len(shas)
 
 
 def file_failure_weights(
@@ -55,7 +58,7 @@ def file_failure_weights(
         runs: Run records from the history contract.
         results: Result records from the history contract.
     Returns:
-        Mapping of file path to weight in (0, 1), sorted by path.
+        Mapping of file path to weight in [0, 1], sorted by path.
         Files never changed in history are absent; pass
         ``global_failure_prior`` to ``change_risk`` as their weight.
     """
