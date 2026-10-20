@@ -7,10 +7,12 @@ runs are ``{sha, timestamp, branch, changed_files}`` and results are
 
 from __future__ import annotations
 
+import statistics
 from collections.abc import Iterable, Mapping
-from typing import Any
+from typing import Any, Literal
 
 Record = Mapping[str, Any]
+RiskLevel = Literal["low", "medium", "high"]
 
 
 def _failing_shas(results: Iterable[Record]) -> set[str]:
@@ -90,3 +92,66 @@ def change_risk(
         raise ValueError(f"prior must be in [0, 1], got {prior}")
     # Sort so the floating-point sum is the same for any input order.
     return sum(weights.get(path, prior) for path in sorted(set(changed_files)))
+
+
+def historical_risk_scores(
+    runs: Iterable[Record], weights: Mapping[str, float], prior: float
+) -> list[float]:
+    """
+    Return the change risk of every run in history, in run order.
+
+    Args:
+        runs: Run records from the history contract.
+        weights: Output of ``file_failure_weights``.
+        prior: Weight for files absent from ``weights``.
+    Returns:
+        One score per run; runs without ``changed_files`` score 0.0.
+    """
+    return [change_risk(run.get("changed_files") or [], weights, prior) for run in runs]
+
+
+def risk_thresholds(scores: Iterable[float]) -> tuple[float, float]:
+    """
+    Return the low/medium and medium/high cut points of historical scores.
+
+    The cut points are the tertiles of the scores, so a history splits into
+    roughly equal thirds.
+    Args:
+        scores: Historical risk scores, e.g. from ``historical_risk_scores``.
+    Returns:
+        ``(low_max, medium_max)`` with ``low_max <= medium_max``.
+    Raises:
+        ValueError: If ``scores`` is empty.
+    """
+    values = sorted(scores)
+    if not values:
+        raise ValueError("cannot compute risk thresholds from an empty history")
+    if len(values) == 1:
+        return values[0], values[0]
+    low_max, medium_max = statistics.quantiles(values, n=3, method="inclusive")
+    return low_max, medium_max
+
+
+def risk_level(score: float, thresholds: tuple[float, float]) -> RiskLevel:
+    """
+    Return the risk level of a change risk score.
+
+    Args:
+        score: Output of ``change_risk``.
+        thresholds: ``(low_max, medium_max)`` from ``risk_thresholds``.
+            Scores equal to a cut point fall in the lower level.
+    Returns:
+        ``"low"``, ``"medium"`` or ``"high"``.
+    Raises:
+        ValueError: If ``low_max`` is greater than ``medium_max``.
+    """
+    low_max, medium_max = thresholds
+    if low_max > medium_max:
+        raise ValueError(
+            f"thresholds must be ordered (low_max <= medium_max), got {thresholds}"
+        )
+    if score <= low_max:
+        return "low"
+    if score <= medium_max:
+        return "medium"
+    return "high"

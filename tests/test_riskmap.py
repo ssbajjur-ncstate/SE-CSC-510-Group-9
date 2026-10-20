@@ -4,6 +4,9 @@ from testbudget.riskmap import (
     change_risk,
     file_failure_weights,
     global_failure_prior,
+    historical_risk_scores,
+    risk_level,
+    risk_thresholds,
 )
 
 
@@ -138,3 +141,61 @@ def test_empty_change_set_has_zero_risk():
 def test_change_risk_rejects_prior_outside_unit_interval(prior):
     with pytest.raises(ValueError, match="prior"):
         change_risk(["src/a.py"], {}, prior)
+
+
+def test_historical_scores_follow_run_order():
+    runs = [make_run("a1", ["x", "y"]), make_run("a2", []), make_run("a3", ["x"])]
+    assert historical_risk_scores(runs, {"x": 0.5}, 0.25) == [0.75, 0.0, 0.5]
+
+
+def test_quantile_thresholds_split_synthetic_history_into_thirds():
+    # Nine runs that never fail: each file weighs 1/3, so runs that change
+    # one, two or three files score 1/3, 2/3 and 1.
+    runs = [
+        make_run(f"s{i}", [f"src/m{i}_{j}.py" for j in range(i // 3 + 1)])
+        for i in range(9)
+    ]
+    results = [make_result(run["sha"], "passed") for run in runs]
+    weights = file_failure_weights(runs, results)
+    prior = global_failure_prior(runs, results)
+    scores = historical_risk_scores(runs, weights, prior)
+
+    thresholds = risk_thresholds(scores)
+    levels = [risk_level(score, thresholds) for score in scores]
+
+    assert levels == ["low"] * 3 + ["medium"] * 3 + ["high"] * 3
+
+
+def test_thresholds_split_uniform_scores_into_thirds():
+    scores = [float(n) for n in range(1, 10)]
+    thresholds = risk_thresholds(scores)
+    levels = [risk_level(score, thresholds) for score in scores]
+    assert [levels.count(level) for level in ("low", "medium", "high")] == [3, 3, 3]
+
+
+def test_thresholds_do_not_depend_on_score_order():
+    assert risk_thresholds([3.0, 1.0, 2.0, 5.0]) == risk_thresholds(
+        [1.0, 2.0, 3.0, 5.0]
+    )
+
+
+def test_single_score_history_gives_equal_thresholds():
+    assert risk_thresholds([0.4]) == (0.4, 0.4)
+
+
+def test_empty_history_cannot_produce_thresholds():
+    with pytest.raises(ValueError, match="empty history"):
+        risk_thresholds([])
+
+
+@pytest.mark.parametrize(
+    ("score", "expected"),
+    [(0.0, "low"), (1.0, "low"), (1.5, "medium"), (2.0, "medium"), (2.1, "high")],
+)
+def test_risk_level_boundaries_fall_in_the_lower_level(score, expected):
+    assert risk_level(score, (1.0, 2.0)) == expected
+
+
+def test_risk_level_rejects_unordered_thresholds():
+    with pytest.raises(ValueError, match="ordered"):
+        risk_level(1.0, (2.0, 1.0))
