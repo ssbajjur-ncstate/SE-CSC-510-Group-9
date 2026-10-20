@@ -24,6 +24,9 @@ TestBudget is compared with these orderings, all given the same history and the 
 Each metric is reported per method and per risk level.
 
 ## 4. Temporal split
+
+Runs are replayed in the order they happened. The plan for run N uses only runs 1 to N-1: their results, their changed files and the skip debt they left. Nothing from run N or later is read. A test enforces this.
+
 ## 5. Failing runs and flakes
 ## 6. Failure conditions
 ## 7. Data sources
