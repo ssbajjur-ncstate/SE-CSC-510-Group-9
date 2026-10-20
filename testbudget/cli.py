@@ -8,7 +8,6 @@ from testbudget.db import (
 )
 from testbudget.ingest import parse_junit
 
-
 DEFAULT_DB = "testbudget.db"
 DEFAULT_LINKS = "fixtures/test_links.json"
 

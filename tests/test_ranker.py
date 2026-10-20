@@ -1,9 +1,11 @@
 import pytest
+
 from testbudget.ranker import (
     get_linked_tests,
     rank_tests,
 )
 from testbudget.selector import select_with_budget
+
 
 def test_get_linked_tests():
     links = {

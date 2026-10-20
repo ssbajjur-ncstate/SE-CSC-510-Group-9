@@ -1,5 +1,6 @@
 import json
 
+
 def load_links(path):
     """
     Load the changed-file-to-test mapping from JSON.

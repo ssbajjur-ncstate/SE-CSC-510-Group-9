@@ -1,11 +1,10 @@
-from testbudget.ingest import parse_junit
 from testbudget.db import (
-    init_db,
-    insert_test_results,
     get_all_results,
     get_test_stats,
+    init_db,
+    insert_test_results,
 )
-
+from testbudget.ingest import parse_junit
 
 FIXTURE = "fixtures/sample_junit.xml"
 

@@ -3,7 +3,6 @@ import json
 from testbudget.cli import main
 from testbudget.db import get_all_results
 
-
 FIXTURE = "fixtures/sample_junit.xml"
 
 
