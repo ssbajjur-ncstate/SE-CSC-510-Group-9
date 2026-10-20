@@ -32,4 +32,13 @@ Runs are replayed in the order they happened. The plan for run N uses only runs 
 A failing run is a run where at least one test has status failed or error after retries. A failure is flaky, and is dropped from the failing set, if the same test passes on retry or passes on the same SHA in another attempt. Until the flake filter module exists, this one-line rule is used. Runs that fail on installation or collection are recorded but not counted as test failures.
 
 ## 6. Failure conditions
+
+The hypothesis fails if any of these hold on the committed history:
+
+- catch rate at 30% of suite time is below 85%
+- TestBudget is not above the best baseline at the same budget
+- there are too few failing runs to say anything (fewer than about 10 per risk level)
+
+A fail is reported in the M0 issue with the number, the commit it was computed at, and one decision: persevere, re-plan or descope.
+
 ## 7. Data sources
