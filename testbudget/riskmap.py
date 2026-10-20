@@ -14,6 +14,9 @@ from typing import Any, Literal
 Record = Mapping[str, Any]
 RiskLevel = Literal["low", "medium", "high"]
 
+# Pseudo-runs at the global failure rate added to every file's history.
+PRIOR_STRENGTH = 2
+
 
 def _failing_shas(results: Iterable[Record]) -> set[str]:
     """Return the shas of runs with at least one failed result."""
@@ -24,7 +27,8 @@ def global_failure_prior(runs: Iterable[Record], results: Iterable[Record]) -> f
     """
     Return the Laplace-smoothed share of runs with at least one failure.
 
-    Used as the weight of files that have no history.
+    Used as the weight of files that have no history, and as the value
+    every file weight is shrunk toward.
     Args:
         runs: Run records from the history contract.
         results: Result records from the history contract.
@@ -40,18 +44,24 @@ def file_failure_weights(
     runs: Iterable[Record], results: Iterable[Record]
 ) -> dict[str, float]:
     """
-    Return each changed file's Laplace-smoothed failure share.
+    Return each changed file's failure share, shrunk toward the global prior.
 
-    For every file, the weight is the share of runs that changed it and had
-    at least one failed result, smoothed as ``(failing + 1) / (touched + 2)``.
+    For every file, the raw weight is the share of runs that changed it and
+    had at least one failed result. It is smoothed as
+    ``(failing + PRIOR_STRENGTH * prior) / (touched + PRIOR_STRENGTH)`` where
+    ``prior`` is ``global_failure_prior``, so a rarely touched file stays
+    close to the global failure rate instead of close to 0.5.
     Args:
         runs: Run records from the history contract.
         results: Result records from the history contract.
     Returns:
         Mapping of file path to weight in (0, 1), sorted by path.
-        Files never changed in history are absent; see
-        ``global_failure_prior`` for their weight.
+        Files never changed in history are absent; pass
+        ``global_failure_prior`` to ``change_risk`` as their weight.
     """
+    runs = list(runs)
+    results = list(results)
+    prior = global_failure_prior(runs, results)
     failing = _failing_shas(results)
     touched: dict[str, int] = {}
     failed: dict[str, int] = {}
@@ -67,7 +77,8 @@ def file_failure_weights(
             if sha in failing:
                 failed[path] = failed.get(path, 0) + 1
     return {
-        path: (failed.get(path, 0) + 1) / (touched[path] + 2)
+        path: (failed.get(path, 0) + PRIOR_STRENGTH * prior)
+        / (touched[path] + PRIOR_STRENGTH)
         for path in sorted(touched)
     }
 
