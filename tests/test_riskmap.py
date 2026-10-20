@@ -1,6 +1,10 @@
 import pytest
 
-from testbudget.riskmap import file_failure_weights, global_failure_prior
+from testbudget.riskmap import (
+    change_risk,
+    file_failure_weights,
+    global_failure_prior,
+)
 
 
 def make_run(sha, changed_files):
@@ -94,3 +98,43 @@ def test_global_prior_of_empty_history_is_one_half():
 def test_global_prior_ignores_results_without_a_run():
     runs = [make_run("a1", ["src/pay.py"])]
     assert global_failure_prior(runs, [make_result("zz", "failed")]) == 1 / 3
+
+
+def test_change_risk_sums_known_file_weights():
+    weights = {"src/pay.py": 0.75, "src/ui.py": 0.5}
+    assert change_risk(["src/pay.py", "src/ui.py"], weights, 0.2) == 1.25
+
+
+def test_unknown_file_gets_the_prior():
+    weights = {"src/pay.py": 0.75}
+    assert change_risk(["src/new.py"], weights, 0.2) == 0.2
+    assert change_risk(["src/pay.py", "src/new.py"], weights, 0.2) == 0.95
+
+
+def test_empty_history_returns_the_prior_for_every_file():
+    runs, results = [], []
+    weights = file_failure_weights(runs, results)
+    prior = global_failure_prior(runs, results)
+    changed = ["src/a.py", "src/b.py", "src/c.py"]
+    assert change_risk(changed, weights, prior) == pytest.approx(3 * prior)
+
+
+def test_duplicate_changed_files_count_once():
+    assert change_risk(["src/a.py", "src/a.py"], {"src/a.py": 0.4}, 0.2) == 0.4
+
+
+def test_change_risk_does_not_depend_on_file_order():
+    weights = {"a": 0.1, "b": 0.2, "c": 0.3}
+    assert change_risk(["c", "a", "b"], weights, 0.5) == change_risk(
+        ["a", "b", "c"], weights, 0.5
+    )
+
+
+def test_empty_change_set_has_zero_risk():
+    assert change_risk([], {"src/pay.py": 0.75}, 0.2) == 0.0
+
+
+@pytest.mark.parametrize("prior", [-0.1, 1.5])
+def test_change_risk_rejects_prior_outside_unit_interval(prior):
+    with pytest.raises(ValueError, match="prior"):
+        change_risk(["src/a.py"], {}, prior)

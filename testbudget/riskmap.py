@@ -68,3 +68,25 @@ def file_failure_weights(
         path: (failed.get(path, 0) + 1) / (touched[path] + 2)
         for path in sorted(touched)
     }
+
+
+def change_risk(
+    changed_files: Iterable[str], weights: Mapping[str, float], prior: float
+) -> float:
+    """
+    Return the risk score of a change set.
+
+    Args:
+        changed_files: Paths changed by the pull request; duplicates count once.
+        weights: Output of ``file_failure_weights``.
+        prior: Weight for files absent from ``weights``, normally
+            ``global_failure_prior``.
+    Returns:
+        Sum of the file weights; 0.0 for an empty change set.
+    Raises:
+        ValueError: If ``prior`` is outside [0, 1].
+    """
+    if not 0.0 <= prior <= 1.0:
+        raise ValueError(f"prior must be in [0, 1], got {prior}")
+    # Sort so the floating-point sum is the same for any input order.
+    return sum(weights.get(path, prior) for path in sorted(set(changed_files)))
