@@ -2,6 +2,7 @@ import json
 import sqlite3
 from pathlib import Path
 
+
 def get_connection(db_path):
     """
     Create and return a SQLite connection.
