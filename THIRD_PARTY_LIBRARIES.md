@@ -1,10 +1,16 @@
 # Third-party libraries
 
-TestBudget has no runtime dependencies: the `testbudget` package uses only the
-Python standard library (Python 3.10+). Every third-party library below is used
-for building the package or for development (tests, linting, type checking).
+TestBudget has one runtime dependency, PyYAML, which reads `testbudget.yml`
+(pinned tests). Every other third-party library below is used for building the
+package or for development (tests, linting, type checking).
 
 Versions are the constraints declared in `pyproject.toml`.
+
+## Runtime
+
+| Library | Version | Purpose | Licence |
+|---|---|---|---|
+| [PyYAML](https://pypi.org/project/PyYAML/) | `>=6` | Reads `testbudget.yml` (pinned tests) | [MIT](https://pypi.org/project/PyYAML/) |
 
 ## Build
 
@@ -23,6 +29,7 @@ Installed with `pip install -e ".[dev]"`.
 | [hypothesis](https://pypi.org/project/hypothesis/) | `>=6.100` | Property-based tests for the ranker and rules | [MPL-2.0](https://pypi.org/project/hypothesis/) |
 | [ruff](https://pypi.org/project/ruff/) | `>=0.6` | Linter and import sorter | [MIT](https://pypi.org/project/ruff/) |
 | [mypy](https://pypi.org/project/mypy/) | `>=1.10` | Static type checker | [MIT](https://pypi.org/project/mypy/) |
+| [types-PyYAML](https://pypi.org/project/types-PyYAML/) | any | Type stubs so `mypy testbudget` can check code that imports `yaml` | [Apache-2.0](https://pypi.org/project/types-PyYAML/) |
 | [pre-commit](https://pypi.org/project/pre-commit/) | `>=3.5` | Runs the ruff and pytest hooks in `.pre-commit-config.yaml` before each commit | [MIT](https://pypi.org/project/pre-commit/) |
 
 Hypothesis is the only copyleft (file-level, MPL-2.0) licence in the list. It is
