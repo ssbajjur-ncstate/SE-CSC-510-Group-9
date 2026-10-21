@@ -182,3 +182,34 @@ def test_plan_rejects_negative_budget(tmp_path, capsys):
 
     output = capsys.readouterr().out
     assert "Budget cannot be negative" in output
+
+def test_links_report_missing_file(tmp_path, capsys):
+    from testbudget.cli import main
+
+    code = main(["links", "--report", "--links", str(tmp_path / "nope.json")])
+
+    assert code == 1
+    assert "not found" in capsys.readouterr().out
+
+
+def test_links_report_prints_summary(tmp_path, capsys):
+    import json
+
+    from testbudget.cli import main
+
+    links_file = tmp_path / "links.json"
+    links_file.write_text(json.dumps({
+        "tests/t.py::test_a": [{"file": "src/a.py", "source": "import", "weight": 1.0}]
+    }))
+
+    code = main(["links", "--report", "--links", str(links_file)])
+
+    assert code == 0
+    assert "import: 1" in capsys.readouterr().out
+
+
+def test_links_without_report_flag_does_nothing(capsys):
+    from testbudget.cli import main
+
+    assert main(["links"]) == 1
+    assert "Use --report" in capsys.readouterr().out
