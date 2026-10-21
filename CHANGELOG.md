@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added Playwright JUnit parsing, retry deduplication, and per-file plan invocations.
 - Added derived flake filtering for retry passes and same-SHA pass/fail results.
 
+- Added authorized `/testbudget full` reviewer overrides and audit-mode execution policy.
+
+
 ### Added
 
 - mkdocs documentation site: project story, a links tutorial and an API reference generated from docstrings, deployed to GitHub Pages.
