@@ -1,6 +1,11 @@
 import pytest
 
-from testbudget.calibrate import read_replay_csv
+from testbudget.calibrate import (
+    CalibrationParams,
+    calibrate,
+    catch_rates,
+    read_replay_csv,
+)
 
 FIXTURE = "fixtures/replay_synthetic.csv"
 HEADER = "sha,risk_level,budget_fraction,caught\n"
@@ -71,3 +76,115 @@ def test_malformed_row_fails_naming_the_line(tmp_path, row, message):
     with pytest.raises(ValueError, match=message) as error:
         read_replay_csv(path)
     assert "replay.csv:3" in str(error.value)
+
+
+def rows_for(level, detects, fractions=(0.1, 0.2, 0.3, 0.4, 0.5)):
+    """Build replay rows where run i is caught at fractions >= detects[i]."""
+    return [
+        {
+            "sha": f"{level}{index}",
+            "risk_level": level,
+            "budget_fraction": fraction,
+            "caught": int(fraction >= detect),
+        }
+        for index, detect in enumerate(detects)
+        for fraction in fractions
+    ]
+
+
+def test_calibration_recovers_the_planted_budgets():
+    budgets = calibrate(read_replay_csv(FIXTURE))
+    assert {level: b["budget_fraction"] for level, b in budgets.items()} == {
+        "low": 0.2,
+        "medium": 0.4,
+        "high": 0.5,
+    }
+    assert all(b["calibrated"] for b in budgets.values())
+    assert budgets["low"]["catch_rate"] == pytest.approx(0.95)
+    assert budgets["high"]["failing_runs"] == 20
+
+
+def test_catch_rate_is_the_share_caught_at_each_fraction():
+    rows = rows_for("low", [0.1, 0.3, 0.5, 0.5])
+    assert catch_rates(rows, "low") == {
+        0.1: 0.25,
+        0.2: 0.25,
+        0.3: 0.5,
+        0.4: 0.5,
+        0.5: 1.0,
+    }
+    assert catch_rates(rows, "high") == {}
+
+
+def test_sparse_level_inherits_the_next_higher_budget():
+    rows = (
+        rows_for("high", [0.3] * 12)
+        + rows_for("medium", [0.1] * 3)
+        + rows_for("low", [0.1] * 2)
+    )
+    budgets = calibrate(rows, CalibrationParams(floor=0.0, min_failing_runs=10))
+    assert budgets["high"] == {
+        "budget_fraction": 0.3,
+        "calibrated": True,
+        "catch_rate": 1.0,
+        "failing_runs": 12,
+        "note": "met target at 0.3 (catch rate 1.000)",
+    }
+    assert budgets["medium"]["budget_fraction"] == 0.3
+    assert budgets["medium"]["calibrated"] is False
+    assert budgets["medium"]["note"] == "3 of 10 failing runs; inherited from high"
+    assert budgets["low"]["budget_fraction"] == 0.3
+    assert budgets["low"]["note"] == "2 of 10 failing runs; inherited from medium"
+
+
+def test_sparse_high_level_falls_back_to_the_ceiling():
+    rows = rows_for("low", [0.1] * 12)
+    budgets = calibrate(rows, CalibrationParams(ceiling=0.7))
+    assert budgets["high"]["budget_fraction"] == 0.7
+    assert budgets["high"]["calibrated"] is False
+    assert budgets["high"]["failing_runs"] == 0
+    assert budgets["medium"]["budget_fraction"] == 0.7
+    assert budgets["low"]["calibrated"] is True
+
+
+def test_budget_below_the_floor_is_raised_to_the_floor():
+    rows = rows_for("high", [0.1] * 10)
+    budgets = calibrate(rows, CalibrationParams(floor=0.25, min_failing_runs=5))
+    assert budgets["high"]["budget_fraction"] == 0.25
+    assert budgets["high"]["note"] == "met target at 0.1; raised to floor"
+
+
+def test_budget_above_the_ceiling_is_capped_at_the_ceiling():
+    rows = rows_for("high", [0.5] * 10)
+    budgets = calibrate(rows, CalibrationParams(ceiling=0.4, min_failing_runs=5))
+    assert budgets["high"]["budget_fraction"] == 0.4
+    assert budgets["high"]["note"] == "met target at 0.5; capped at ceiling"
+
+
+def test_unmet_target_uses_the_ceiling():
+    rows = rows_for("high", [0.1] * 5 + [0.9] * 5)
+    budgets = calibrate(rows, CalibrationParams(min_failing_runs=5))
+    assert budgets["high"]["budget_fraction"] == 0.6
+    assert budgets["high"]["catch_rate"] == 0.5
+    assert budgets["high"]["note"] == "target not met at any fraction; using ceiling"
+
+
+def test_calibration_of_an_empty_replay_fails():
+    with pytest.raises(ValueError, match="empty replay"):
+        calibrate([])
+
+
+@pytest.mark.parametrize(
+    ("settings", "message"),
+    [
+        ({"target_catch_rate": 0.0}, "target_catch_rate"),
+        ({"target_catch_rate": 1.5}, "target_catch_rate"),
+        ({"floor": 0.5, "ceiling": 0.4}, "floor and ceiling"),
+        ({"ceiling": 1.2}, "floor and ceiling"),
+        ({"floor": -0.1}, "floor and ceiling"),
+        ({"min_failing_runs": 0}, "min_failing_runs"),
+    ],
+)
+def test_bad_calibration_settings_are_rejected(settings, message):
+    with pytest.raises(ValueError, match=message):
+        CalibrationParams(**settings)
