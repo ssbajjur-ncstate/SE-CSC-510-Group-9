@@ -63,7 +63,8 @@ def build_text(plan: dict) -> str:
     lines = ["### Tests run", ""]
     for t in plan["selected"]:
         lines.append(
-            f"- `{t['test_id']}` ({t.get('duration_s', 0.0):.1f}s): {t.get('reason', '')}"
+            f"- `{t['test_id']}` ({t.get('duration_s', 0.0):.1f}s): "
+            f"{t.get('reason', '')}"
         )
     if not plan["selected"]:
         lines.append("- none")
@@ -79,7 +80,10 @@ def build_text(plan: dict) -> str:
 
 
 def build_annotations(plan: dict) -> list[dict]:
-    """One annotation per skipped test, on its test file; warning if it has skip debt."""
+    """One annotation per skipped test, on its test file.
+
+    Warning if it has skip debt.
+    """
     validate_plan(plan)
     annotations = []
     for t in plan["skipped"]:
@@ -91,7 +95,9 @@ def build_annotations(plan: dict) -> list[dict]:
                 "end_line": 1,
                 "annotation_level": "warning" if debt > 0 else "notice",
                 "title": f"Skipped (debt {debt})",
-                "message": f"{t['test_id']} skipped: {t.get('skip_reason', 'not selected')}",
+                "message": (
+                    f"{t['test_id']} skipped: {t.get('skip_reason', 'not selected')}"
+                ),
             }
         )
     return annotations
@@ -100,7 +106,10 @@ def build_annotations(plan: dict) -> list[dict]:
 def page_annotations(
     annotations: list[dict], size: int = MAX_ANNOTATIONS
 ) -> list[list[dict]]:
-    """Split annotations into pages of at most ``size`` (the API limit is 50 per request)."""
+    """Split annotations into pages of at most ``size``.
+
+    The API limit is 50 per request.
+    """
     if size < 1:
         raise ValueError("page size must be at least 1")
     if not annotations:
@@ -109,7 +118,10 @@ def page_annotations(
 
 
 def build_payloads(plan: dict, name: str = CHECK_NAME) -> list[dict]:
-    """Return the request bodies: the first creates the check run, the rest add pages."""
+    """Return the request bodies.
+
+    The first creates the check run, the rest add pages.
+    """
     validate_plan(plan)
     pages = page_annotations(build_annotations(plan))
     title = f"{len(plan['selected'])} run, {len(plan['skipped'])} skipped"
