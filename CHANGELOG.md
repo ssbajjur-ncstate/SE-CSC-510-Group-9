@@ -13,3 +13,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `pyproject.toml` with a `testbudget` console script and a `dev` extra; install with `pip install -e ".[dev]"`.
 
+- Route links: resolve Playwright `page.goto` paths to Next.js route files (`testbudget/links/routes.py`).
