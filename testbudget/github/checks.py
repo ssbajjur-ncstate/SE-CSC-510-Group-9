@@ -4,6 +4,7 @@ The payload builders are plain functions over a plan dict (the plan.json
 contract), so they can be tested without the network. ``publish_check_run``
 sends them with an injectable ``request`` function.
 """
+
 from __future__ import annotations
 
 import json
@@ -14,7 +15,14 @@ API = "https://api.github.com"
 CHECK_NAME = "TestBudget"
 MAX_ANNOTATIONS = 50
 MAX_TEXT = 60000
-REQUIRED = ("sha", "risk_level", "budget_s", "selected", "skipped", "catch_rate_estimate")
+REQUIRED = (
+    "sha",
+    "risk_level",
+    "budget_s",
+    "selected",
+    "skipped",
+    "catch_rate_estimate",
+)
 
 
 def validate_plan(plan: dict) -> None:
@@ -38,13 +46,15 @@ def build_summary(plan: dict) -> str:
     used = sum(t.get("duration_s", 0.0) for t in plan["selected"])
     rate = plan["catch_rate_estimate"]
     rate_text = "unknown" if rate is None else f"{rate:.0%}"
-    return "\n".join([
-        f"**Risk level:** {plan['risk_level']}",
-        f"**Budget:** {plan['budget_s']:.0f}s (planned run time {used:.1f}s)",
-        f"**Historical catch rate:** {rate_text}",
-        f"**Tests run:** {len(plan['selected'])}",
-        f"**Tests skipped:** {len(plan['skipped'])}",
-    ])
+    return "\n".join(
+        [
+            f"**Risk level:** {plan['risk_level']}",
+            f"**Budget:** {plan['budget_s']:.0f}s (planned run time {used:.1f}s)",
+            f"**Historical catch rate:** {rate_text}",
+            f"**Tests run:** {len(plan['selected'])}",
+            f"**Tests skipped:** {len(plan['skipped'])}",
+        ]
+    )
 
 
 def build_text(plan: dict) -> str:
@@ -52,7 +62,9 @@ def build_text(plan: dict) -> str:
     validate_plan(plan)
     lines = ["### Tests run", ""]
     for t in plan["selected"]:
-        lines.append(f"- `{t['test_id']}` ({t.get('duration_s', 0.0):.1f}s): {t.get('reason', '')}")
+        lines.append(
+            f"- `{t['test_id']}` ({t.get('duration_s', 0.0):.1f}s): {t.get('reason', '')}"
+        )
     if not plan["selected"]:
         lines.append("- none")
     lines += ["", "### Tests skipped", ""]
@@ -72,24 +84,28 @@ def build_annotations(plan: dict) -> list[dict]:
     annotations = []
     for t in plan["skipped"]:
         debt = t.get("skip_debt", 0)
-        annotations.append({
-            "path": test_file(t["test_id"]),
-            "start_line": 1,
-            "end_line": 1,
-            "annotation_level": "warning" if debt > 0 else "notice",
-            "title": f"Skipped (debt {debt})",
-            "message": f"{t['test_id']} skipped: {t.get('skip_reason', 'not selected')}",
-        })
+        annotations.append(
+            {
+                "path": test_file(t["test_id"]),
+                "start_line": 1,
+                "end_line": 1,
+                "annotation_level": "warning" if debt > 0 else "notice",
+                "title": f"Skipped (debt {debt})",
+                "message": f"{t['test_id']} skipped: {t.get('skip_reason', 'not selected')}",
+            }
+        )
     return annotations
 
 
-def page_annotations(annotations: list[dict], size: int = MAX_ANNOTATIONS) -> list[list[dict]]:
+def page_annotations(
+    annotations: list[dict], size: int = MAX_ANNOTATIONS
+) -> list[list[dict]]:
     """Split annotations into pages of at most ``size`` (the API limit is 50 per request)."""
     if size < 1:
         raise ValueError("page size must be at least 1")
     if not annotations:
         return [[]]
-    return [annotations[i:i + size] for i in range(0, len(annotations), size)]
+    return [annotations[i : i + size] for i in range(0, len(annotations), size)]
 
 
 def build_payloads(plan: dict, name: str = CHECK_NAME) -> list[dict]:
@@ -143,7 +159,12 @@ def publish_check_run(plan: dict, repo: str, token: str, request=_http) -> int:
     """Create the check run, or update the existing one for this SHA. Returns its id."""
     payloads = build_payloads(plan)
     base = f"{API}/repos/{repo}"
-    found = request("GET", f"{base}/commits/{plan['sha']}/check-runs?check_name={CHECK_NAME}", token, None)
+    found = request(
+        "GET",
+        f"{base}/commits/{plan['sha']}/check-runs?check_name={CHECK_NAME}",
+        token,
+        None,
+    )
     existing = found.get("check_runs", [])
     if existing:
         run_id = existing[0]["id"]

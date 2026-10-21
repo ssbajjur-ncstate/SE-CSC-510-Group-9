@@ -11,6 +11,8 @@ from testbudget.github.checks import (
     get_token,
     page_annotations,
     publish_check_run,
+)
+from testbudget.github.checks import (
     test_file as file_of,
 )
 
@@ -20,7 +22,11 @@ PLAN = json.loads((Path(__file__).parent.parent / "fixtures" / "plan.json").read
 def plan_with_skipped(n):
     plan = dict(PLAN)
     plan["skipped"] = [
-        {"test_id": f"tests/test_{i}.py::test_x", "skip_reason": "over budget", "skip_debt": 1}
+        {
+            "test_id": f"tests/test_{i}.py::test_x",
+            "skip_reason": "over budget",
+            "skip_debt": 1,
+        }
         for i in range(n)
     ]
     return plan
@@ -70,15 +76,21 @@ def test_annotation_levels_follow_skip_debt():
 
 
 def test_paging_at_exactly_50_is_one_page():
-    assert [len(p) for p in page_annotations(build_annotations(plan_with_skipped(50)))] == [50]
+    assert [
+        len(p) for p in page_annotations(build_annotations(plan_with_skipped(50)))
+    ] == [50]
 
 
 def test_paging_at_51_is_two_pages():
-    assert [len(p) for p in page_annotations(build_annotations(plan_with_skipped(51)))] == [50, 1]
+    assert [
+        len(p) for p in page_annotations(build_annotations(plan_with_skipped(51)))
+    ] == [50, 1]
 
 
 def test_paging_120_gives_50_50_20():
-    assert [len(p) for p in page_annotations(build_annotations(plan_with_skipped(120)))] == [50, 50, 20]
+    assert [
+        len(p) for p in page_annotations(build_annotations(plan_with_skipped(120)))
+    ] == [50, 50, 20]
 
 
 def test_paging_empty_gives_one_empty_page():
