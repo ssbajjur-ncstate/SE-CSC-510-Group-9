@@ -433,3 +433,162 @@ def split_playwright_test_id(
         )
 
     return test_file, title
+
+def load_playwright_test_ids(
+    plan_path,
+):
+    """
+    Read Playwright test IDs selected by a TestBudget plan.
+
+    Pytest IDs use `path::name`, while Playwright IDs use `file › title`.
+    Only Playwright IDs are returned by this adapter.
+    """
+
+    plan_path = Path(
+        plan_path
+    )
+
+    if not plan_path.exists():
+        raise PlaywrightAdapterError(
+            f"TestBudget plan does not exist: {plan_path}"
+        )
+
+    try:
+        plan = json.loads(
+            plan_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+    except json.JSONDecodeError as error:
+        raise PlaywrightAdapterError(
+            f"invalid TestBudget plan JSON: {plan_path}"
+        ) from error
+
+    if not isinstance(plan, dict):
+        raise PlaywrightAdapterError(
+            "TestBudget plan must be a JSON object"
+        )
+
+    selected = plan.get(
+        "selected"
+    )
+
+    if not isinstance(selected, list):
+        raise PlaywrightAdapterError(
+            "TestBudget plan must contain a selected list"
+        )
+
+    test_ids = []
+    seen = set()
+
+    for index, entry in enumerate(
+        selected,
+        start=1,
+    ):
+        if not isinstance(entry, dict):
+            raise PlaywrightAdapterError(
+                f"selected item {index} must be an object"
+            )
+
+        test_id = entry.get(
+            "test_id"
+        )
+
+        if (
+            not isinstance(test_id, str)
+            or not test_id.strip()
+        ):
+            raise PlaywrightAdapterError(
+                f"selected item {index} has no valid test_id"
+            )
+
+        test_id = test_id.strip()
+
+        # This adapter only owns Playwright IDs.
+        if " › " not in test_id:
+            continue
+
+        # Validate the ID before returning it.
+        split_playwright_test_id(
+            test_id
+        )
+
+        if test_id not in seen:
+            test_ids.append(
+                test_id
+            )
+
+            seen.add(
+                test_id
+            )
+
+    return test_ids
+
+
+def build_playwright_invocations(
+    plan_path,
+):
+    """
+    Group selected Playwright tests into per-file invocations.
+
+    Playwright does not guarantee execution ordering across files under its
+    normal parallel execution model. TestBudget therefore returns one
+    invocation group per file.
+
+    File order follows the first occurrence of each file in `plan.json`.
+    Test title order within each file follows the plan.
+
+    Returns:
+        A list such as:
+
+        [
+            {
+                "file": "tests/checkout.spec.ts",
+                "test_ids": [...],
+                "titles": [...]
+            }
+        ]
+    """
+
+    test_ids = load_playwright_test_ids(
+        plan_path
+    )
+
+    groups = {}
+    file_order = []
+
+    for test_id in test_ids:
+        test_file, title = (
+            split_playwright_test_id(
+                test_id
+            )
+        )
+
+        if test_file not in groups:
+            groups[test_file] = {
+                "file": test_file,
+                "test_ids": [],
+                "titles": [],
+            }
+
+            file_order.append(
+                test_file
+            )
+
+        groups[
+            test_file
+        ]["test_ids"].append(
+            test_id
+        )
+
+        groups[
+            test_file
+        ]["titles"].append(
+            title
+        )
+
+    return [
+        groups[test_file]
+        for test_file in file_order
+    ]

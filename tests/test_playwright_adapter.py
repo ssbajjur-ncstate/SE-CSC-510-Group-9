@@ -1,9 +1,12 @@
+import json
 from pathlib import Path
 
 import pytest
 
 from testbudget.adapters.playwright_adapter import (
     PlaywrightAdapterError,
+    build_playwright_invocations,
+    load_playwright_test_ids,
     normalize_playwright_file,
     normalize_playwright_test_id,
     parse_playwright_junit,
@@ -329,3 +332,285 @@ def test_split_playwright_test_id():
     assert title == (
         "checkout succeeds"
     )
+
+
+
+
+def write_plan(
+    path,
+    test_ids,
+):
+    path.write_text(
+        json.dumps(
+            {
+                "sha": "abc123",
+                "risk_level": "medium",
+                "budget_s": 20,
+                "selected": [
+                    {
+                        "test_id": test_id,
+                        "reason": "fixture",
+                        "duration_s": 1.0,
+                    }
+                    for test_id
+                    in test_ids
+                ],
+                "skipped": [],
+                "catch_rate_estimate": 0.8,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_load_playwright_ids_preserves_plan_order(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    write_plan(
+        plan,
+        [
+            (
+                "tests/payment.spec.ts "
+                "› payment succeeds"
+            ),
+            (
+                "tests/checkout.spec.ts "
+                "› checkout succeeds"
+            ),
+        ],
+    )
+
+    selected = (
+        load_playwright_test_ids(
+            plan
+        )
+    )
+
+    assert selected == [
+        (
+            "tests/payment.spec.ts "
+            "› payment succeeds"
+        ),
+        (
+            "tests/checkout.spec.ts "
+            "› checkout succeeds"
+        ),
+    ]
+
+
+def test_pytest_ids_are_ignored(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    write_plan(
+        plan,
+        [
+            (
+                "tests/test_cart.py"
+                "::test_cart"
+            ),
+            (
+                "tests/cart.spec.ts "
+                "› cart works"
+            ),
+        ],
+    )
+
+    selected = (
+        load_playwright_test_ids(
+            plan
+        )
+    )
+
+    assert selected == [
+        (
+            "tests/cart.spec.ts "
+            "› cart works"
+        )
+    ]
+
+
+def test_invocations_group_tests_by_file(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    write_plan(
+        plan,
+        [
+            (
+                "tests/checkout.spec.ts "
+                "› checkout succeeds"
+            ),
+            (
+                "tests/payment.spec.ts "
+                "› payment succeeds"
+            ),
+            (
+                "tests/checkout.spec.ts "
+                "› checkout rejects card"
+            ),
+        ],
+    )
+
+    invocations = (
+        build_playwright_invocations(
+            plan
+        )
+    )
+
+    assert len(invocations) == 2
+
+    assert invocations[0] == {
+        "file": (
+            "tests/checkout.spec.ts"
+        ),
+        "test_ids": [
+            (
+                "tests/checkout.spec.ts "
+                "› checkout succeeds"
+            ),
+            (
+                "tests/checkout.spec.ts "
+                "› checkout rejects card"
+            ),
+        ],
+        "titles": [
+            "checkout succeeds",
+            "checkout rejects card",
+        ],
+    }
+
+    assert invocations[1][
+        "file"
+    ] == "tests/payment.spec.ts"
+
+
+def test_invocation_file_order_uses_first_plan_occurrence(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    write_plan(
+        plan,
+        [
+            (
+                "tests/z.spec.ts "
+                "› z test"
+            ),
+            (
+                "tests/a.spec.ts "
+                "› a test"
+            ),
+        ],
+    )
+
+    invocations = (
+        build_playwright_invocations(
+            plan
+        )
+    )
+
+    assert [
+        item["file"]
+        for item in invocations
+    ] == [
+        "tests/z.spec.ts",
+        "tests/a.spec.ts",
+    ]
+
+
+def test_duplicate_playwright_id_is_removed(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    test_id = (
+        "tests/cart.spec.ts "
+        "› cart works"
+    )
+
+    write_plan(
+        plan,
+        [
+            test_id,
+            test_id,
+        ],
+    )
+
+    selected = (
+        load_playwright_test_ids(
+            plan
+        )
+    )
+
+    assert selected == [
+        test_id
+    ]
+
+
+def test_missing_plan_raises_error(
+    tmp_path,
+):
+    with pytest.raises(
+        PlaywrightAdapterError,
+        match="does not exist",
+    ):
+        load_playwright_test_ids(
+            tmp_path / "missing.json"
+        )
+
+
+def test_invalid_plan_json_raises_error(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    plan.write_text(
+        "{not json",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        PlaywrightAdapterError,
+        match="invalid TestBudget plan JSON",
+    ):
+        load_playwright_test_ids(
+            plan
+        )
+
+
+def test_plan_without_selected_raises_error(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    plan.write_text(
+        "{}",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        PlaywrightAdapterError,
+        match="selected list",
+    ):
+        load_playwright_test_ids(
+            plan
+        )
