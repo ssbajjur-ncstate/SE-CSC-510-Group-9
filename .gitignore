@@ -11,3 +11,8 @@ dist/
 htmlcov/
 .mypy_cache/
 .ruff_cache/
+
+# Local environments and generated state
+node_modules/
+.env
+.env.*
