@@ -12,3 +12,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `pyproject.toml` with a `testbudget` console script and a `dev` extra; install with `pip install -e ".[dev]"`.
 
+- Link sources for the ranker: `links.json` writer, Python import links, co-failure links and pinned links (`testbudget/links/`).
