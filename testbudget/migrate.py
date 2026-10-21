@@ -12,6 +12,7 @@ from testbudget.db import (
     load_history_records,
 )
 
+
 class LegacyMigrationError(ValueError):
     """
     Raised when legacy TestBudget history cannot be migrated safely.
@@ -44,19 +45,12 @@ def _get_legacy_columns(connection):
             If the legacy table does not exist.
     """
 
-    rows = connection.execute(
-        "PRAGMA table_info(test_runs)"
-    ).fetchall()
+    rows = connection.execute("PRAGMA table_info(test_runs)").fetchall()
 
     if not rows:
-        raise LegacyMigrationError(
-            "legacy database does not contain a test_runs table"
-        )
+        raise LegacyMigrationError("legacy database does not contain a test_runs table")
 
-    return {
-        row[1]
-        for row in rows
-    }
+    return {row[1] for row in rows}
 
 
 def _validate_legacy_schema(connection):
@@ -68,18 +62,13 @@ def _validate_legacy_schema(connection):
             If required legacy columns are missing.
     """
 
-    columns = _get_legacy_columns(
-        connection
-    )
+    columns = _get_legacy_columns(connection)
 
-    missing = sorted(
-        LEGACY_REQUIRED_COLUMNS - columns
-    )
+    missing = sorted(LEGACY_REQUIRED_COLUMNS - columns)
 
     if missing:
         raise LegacyMigrationError(
-            "legacy test_runs table is missing required columns: "
-            + ", ".join(missing)
+            "legacy test_runs table is missing required columns: " + ", ".join(missing)
         )
 
 
@@ -101,20 +90,12 @@ def _legacy_test_id(
     If the old row has no test file, a stable legacy fallback path is used.
     """
 
-    if (
-        not isinstance(test_name, str)
-        or not test_name.strip()
-    ):
-        raise LegacyMigrationError(
-            "legacy test result has an empty test_name"
-        )
+    if not isinstance(test_name, str) or not test_name.strip():
+        raise LegacyMigrationError("legacy test result has an empty test_name")
 
     test_name = test_name.strip()
 
-    if (
-        isinstance(test_file, str)
-        and test_file.strip()
-    ):
+    if isinstance(test_file, str) and test_file.strip():
         test_file = test_file.strip()
 
         if test_file.endswith(".py"):
@@ -147,14 +128,9 @@ def _legacy_run_sha(
     is an actual commit SHA.
     """
 
-    raw_value = (
-        f"{created_at}\0"
-        f"{changed_file or ''}"
-    )
+    raw_value = f"{created_at}\0{changed_file or ''}"
 
-    digest = hashlib.sha1(
-        raw_value.encode("utf-8")
-    ).hexdigest()
+    digest = hashlib.sha1(raw_value.encode("utf-8")).hexdigest()
 
     return f"legacy-{digest}"
 
@@ -183,22 +159,14 @@ def read_legacy_history(db_path):
     db_path = Path(db_path)
 
     if not db_path.exists():
-        raise LegacyMigrationError(
-            f"legacy database does not exist: {db_path}"
-        )
+        raise LegacyMigrationError(f"legacy database does not exist: {db_path}")
 
-    connection = sqlite3.connect(
-        db_path
-    )
+    connection = sqlite3.connect(db_path)
 
-    connection.row_factory = (
-        sqlite3.Row
-    )
+    connection.row_factory = sqlite3.Row
 
     try:
-        _validate_legacy_schema(
-            connection
-        )
+        _validate_legacy_schema(connection)
 
         rows = connection.execute(
             """
@@ -229,21 +197,16 @@ def read_legacy_history(db_path):
         created_at = row["created_at"]
         changed_file = row["changed_file"]
 
-        if (
-            not isinstance(created_at, str)
-            or not created_at.strip()
-        ):
+        if not isinstance(created_at, str) or not created_at.strip():
             raise LegacyMigrationError(
-                f"legacy row {row['id']} "
-                "has no created_at timestamp"
+                f"legacy row {row['id']} has no created_at timestamp"
             )
 
         status = row["status"]
 
         if status not in ALLOWED_STATUSES:
             raise LegacyMigrationError(
-                f"legacy row {row['id']} "
-                f"has unsupported status: {status}"
+                f"legacy row {row['id']} has unsupported status: {status}"
             )
 
         duration = row["duration"]
@@ -256,10 +219,7 @@ def read_legacy_history(db_path):
             )
             or duration < 0
         ):
-            raise LegacyMigrationError(
-                f"legacy row {row['id']} "
-                "has invalid duration"
-            )
+            raise LegacyMigrationError(f"legacy row {row['id']} has invalid duration")
 
         key = (
             created_at,
@@ -278,7 +238,6 @@ def read_legacy_history(db_path):
         created_at,
         changed_file,
     ), group_rows in groups.items():
-
         sha = _legacy_run_sha(
             created_at,
             changed_file,
@@ -286,22 +245,15 @@ def read_legacy_history(db_path):
 
         changed_files = []
 
-        if (
-            isinstance(changed_file, str)
-            and changed_file.strip()
-        ):
-            changed_files.append(
-                changed_file.strip()
-            )
+        if isinstance(changed_file, str) and changed_file.strip():
+            changed_files.append(changed_file.strip())
 
         runs.append(
             {
                 "sha": sha,
                 "timestamp": created_at,
                 "branch": "legacy",
-                "changed_files": (
-                    changed_files
-                ),
+                "changed_files": (changed_files),
             }
         )
 
@@ -315,17 +267,14 @@ def read_legacy_history(db_path):
                             row["test_name"],
                         )
                     ),
-                    "status": row[
-                        "status"
-                    ],
-                    "duration_s": float(
-                        row["duration"]
-                    ),
+                    "status": row["status"],
+                    "duration_s": float(row["duration"]),
                     "attempt": 1,
                 }
             )
 
     return runs, results
+
 
 def _write_jsonl(
     path,
@@ -393,60 +342,28 @@ def migrate_legacy_history(
             If the existing or generated JSONL history is invalid.
     """
 
-    history_dir = Path(
-        history_dir
-    )
+    history_dir = Path(history_dir)
 
     history_dir.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    existing_runs, existing_results = (
-        load_history_records(
-            history_dir
-        )
-    )
+    existing_runs, existing_results = load_history_records(history_dir)
 
-    legacy_runs, legacy_results = (
-        read_legacy_history(
-            db_path
-        )
-    )
+    legacy_runs, legacy_results = read_legacy_history(db_path)
 
-    existing_shas = {
-        run["sha"]
-        for run in existing_runs
-    }
+    existing_shas = {run["sha"] for run in existing_runs}
 
-    new_runs = [
-        run
-        for run in legacy_runs
-        if run["sha"]
-        not in existing_shas
-    ]
+    new_runs = [run for run in legacy_runs if run["sha"] not in existing_shas]
 
-    new_shas = {
-        run["sha"]
-        for run in new_runs
-    }
+    new_shas = {run["sha"] for run in new_runs}
 
-    new_results = [
-        result
-        for result in legacy_results
-        if result["sha"]
-        in new_shas
-    ]
+    new_results = [result for result in legacy_results if result["sha"] in new_shas]
 
-    combined_runs = (
-        existing_runs
-        + new_runs
-    )
+    combined_runs = existing_runs + new_runs
 
-    combined_results = (
-        existing_results
-        + new_results
-    )
+    combined_results = existing_results + new_results
 
     # Build and validate the complete candidate history in a temporary
     # directory before replacing the repository history files.
@@ -454,23 +371,12 @@ def migrate_legacy_history(
     # This prevents malformed migration output from partially corrupting
     # the committed history.
 
-    with tempfile.TemporaryDirectory(
-        dir=history_dir.parent
-    ) as temp_directory:
+    with tempfile.TemporaryDirectory(dir=history_dir.parent) as temp_directory:
+        temp_history = Path(temp_directory)
 
-        temp_history = Path(
-            temp_directory
-        )
+        temp_runs = temp_history / "runs.jsonl"
 
-        temp_runs = (
-            temp_history
-            / "runs.jsonl"
-        )
-
-        temp_results = (
-            temp_history
-            / "results.jsonl"
-        )
+        temp_results = temp_history / "results.jsonl"
 
         _write_jsonl(
             temp_runs,
@@ -483,19 +389,11 @@ def migrate_legacy_history(
         )
 
         # Reuse the canonical loader from PR 1 as the validation oracle.
-        load_history_records(
-            temp_history
-        )
+        load_history_records(temp_history)
 
-        target_runs = (
-            history_dir
-            / "runs.jsonl"
-        )
+        target_runs = history_dir / "runs.jsonl"
 
-        target_results = (
-            history_dir
-            / "results.jsonl"
-        )
+        target_results = history_dir / "results.jsonl"
 
         shutil.copyfile(
             temp_runs,
@@ -508,22 +406,11 @@ def migrate_legacy_history(
         )
 
     return {
-        "legacy_runs_found": len(
-            legacy_runs
-        ),
-        "legacy_results_found": len(
-            legacy_results
-        ),
-        "runs_added": len(
-            new_runs
-        ),
-        "results_added": len(
-            new_results
-        ),
-        "runs_skipped": (
-            len(legacy_runs)
-            - len(new_runs)
-        ),
+        "legacy_runs_found": len(legacy_runs),
+        "legacy_results_found": len(legacy_results),
+        "runs_added": len(new_runs),
+        "results_added": len(new_results),
+        "runs_skipped": (len(legacy_runs) - len(new_runs)),
     }
 
 
@@ -542,18 +429,13 @@ def build_parser():
     parser.add_argument(
         "--db",
         required=True,
-        help=(
-            "Path to the legacy SQLite database."
-        ),
+        help=("Path to the legacy SQLite database."),
     )
 
     parser.add_argument(
         "--history-dir",
         default="history",
-        help=(
-            "Directory containing runs.jsonl and results.jsonl "
-            "(default: history)."
-        ),
+        help=("Directory containing runs.jsonl and results.jsonl (default: history)."),
     )
 
     return parser
@@ -566,23 +448,18 @@ def main(argv=None):
 
     parser = build_parser()
 
-    args = parser.parse_args(
-        argv
-    )
+    args = parser.parse_args(argv)
 
     try:
         summary = migrate_legacy_history(
             db_path=args.db,
-            history_dir=(
-                args.history_dir
-            ),
+            history_dir=(args.history_dir),
         )
 
     except (
         LegacyMigrationError,
         HistoryFormatError,
     ) as error:
-
         print(
             f"Migration failed: {error}",
             file=sys.stderr,
@@ -590,39 +467,20 @@ def main(argv=None):
 
         return 1
 
-    print(
-        "TESTBUDGET LEGACY HISTORY MIGRATION"
-    )
+    print("TESTBUDGET LEGACY HISTORY MIGRATION")
 
-    print(
-        f"Legacy runs found: "
-        f"{summary['legacy_runs_found']}"
-    )
+    print(f"Legacy runs found: {summary['legacy_runs_found']}")
 
-    print(
-        f"Legacy results found: "
-        f"{summary['legacy_results_found']}"
-    )
+    print(f"Legacy results found: {summary['legacy_results_found']}")
 
-    print(
-        f"Runs added: "
-        f"{summary['runs_added']}"
-    )
+    print(f"Runs added: {summary['runs_added']}")
 
-    print(
-        f"Results added: "
-        f"{summary['results_added']}"
-    )
+    print(f"Results added: {summary['results_added']}")
 
-    print(
-        f"Runs already migrated: "
-        f"{summary['runs_skipped']}"
-    )
+    print(f"Runs already migrated: {summary['runs_skipped']}")
 
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(
-        main()
-    )
+    raise SystemExit(main())
