@@ -16,7 +16,8 @@ def test_build_links_finds_source_file(tmp_path: Path):
     (tmp_path / "src" / "checkout.py").write_text("x = 1\n")
     (tmp_path / "tests").mkdir()
     (tmp_path / "tests" / "test_a.py").write_text(
-        "import src.checkout\ndef test_pay():\n    pass\n")
+        "import src.checkout\ndef test_pay():\n    pass\n"
+    )
     links = build_import_links(tmp_path)
     assert links["tests/test_a.py::test_pay"][0]["file"] == "src/checkout.py"
 

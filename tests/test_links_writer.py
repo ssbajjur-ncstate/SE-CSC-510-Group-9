@@ -5,9 +5,7 @@ import pytest
 from testbudget.links.writer import merge_links, validate_links, write_links
 
 GOOD = {
-    "tests/test_a.py::test_x": [
-        {"file": "src/a.py", "source": "import", "weight": 1.0}
-    ]
+    "tests/test_a.py::test_x": [{"file": "src/a.py", "source": "import", "weight": 1.0}]
 }
 
 
