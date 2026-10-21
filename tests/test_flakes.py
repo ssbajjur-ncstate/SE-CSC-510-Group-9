@@ -361,3 +361,58 @@ def test_negative_duration_raises_error():
         mark_flaky_failures(
             [result]
         )
+
+def test_pytest_style_retry_history_is_filtered():
+    results = [
+        {
+            "sha": "abc123",
+            "test_id": (
+                "tests/test_checkout.py"
+                "::test_checkout"
+            ),
+            "status": "failed",
+            "duration_s": 1.4,
+            "attempt": 1,
+        },
+        {
+            "sha": "abc123",
+            "test_id": (
+                "tests/test_checkout.py"
+                "::test_checkout"
+            ),
+            "status": "passed",
+            "duration_s": 0.8,
+            "attempt": 2,
+        },
+    ]
+
+    real_failures = (
+        filter_non_flaky_failures(
+            results
+        )
+    )
+
+    assert real_failures == []
+
+
+def test_deduplicated_playwright_retry_is_not_a_failure():
+    results = [
+        {
+            "sha": "abc123",
+            "test_id": (
+                "tests/checkout.spec.ts "
+                "› checkout succeeds"
+            ),
+            "status": "passed",
+            "duration_s": 0.8,
+            "attempt": 2,
+        }
+    ]
+
+    real_failures = (
+        filter_non_flaky_failures(
+            results
+        )
+    )
+
+    assert real_failures == []
