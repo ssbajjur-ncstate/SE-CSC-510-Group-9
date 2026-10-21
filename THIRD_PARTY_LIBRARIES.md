@@ -23,6 +23,7 @@ Installed with `pip install -e ".[dev]"`.
 | [hypothesis](https://pypi.org/project/hypothesis/) | `>=6.100` | Property-based tests for the ranker and rules | [MPL-2.0](https://pypi.org/project/hypothesis/) |
 | [ruff](https://pypi.org/project/ruff/) | `>=0.6` | Linter and import sorter | [MIT](https://pypi.org/project/ruff/) |
 | [mypy](https://pypi.org/project/mypy/) | `>=1.10` | Static type checker | [MIT](https://pypi.org/project/mypy/) |
+| [pre-commit](https://pypi.org/project/pre-commit/) | `>=3.5` | Runs the ruff and pytest hooks in `.pre-commit-config.yaml` before each commit | [MIT](https://pypi.org/project/pre-commit/) |
 
 Hypothesis is the only copyleft (file-level, MPL-2.0) licence in the list. It is
 used only in the test suite and is not distributed with the package.
