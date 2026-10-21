@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added migration from prototype SQLite history to committed JSONL history.
 - Added pytest xunit1/xunit2 history parsing and plan-driven test execution.
 - Added Playwright JUnit parsing, retry deduplication, and per-file plan invocations.
+- Added derived flake filtering for retry passes and same-SHA pass/fail results.
 
 ### Added
 
