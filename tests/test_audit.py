@@ -8,6 +8,9 @@ from testbudget.audit import (
     build_execution_policy,
 )
 
+from testbudget.reviewer import (
+    parse_reviewer_command,
+)
 
 def make_plan():
     """
@@ -304,3 +307,62 @@ def test_unknown_reviewer_command_is_rejected():
                 "action": "destroy",
             },
         )
+
+
+def test_writer_comment_forces_full_suite_end_to_end():
+    command = parse_reviewer_command(
+        "/testbudget full",
+        "write",
+    )
+
+    policy = apply_reviewer_command(
+        make_plan(),
+        ALL_TESTS,
+        command,
+    )
+
+    assert (
+        policy["mode"]
+        == "reviewer_full"
+    )
+
+    assert (
+        policy["execute_test_ids"]
+        == ALL_TESTS
+    )
+
+
+def test_audit_mode_without_comment_still_runs_full_suite():
+    command = parse_reviewer_command(
+        "ordinary review comment",
+        "write",
+    )
+
+    assert command is None
+
+    policy = apply_reviewer_command(
+        make_plan(),
+        ALL_TESTS,
+        command,
+        audit_mode=True,
+    )
+
+    assert (
+        policy["mode"]
+        == "audit"
+    )
+
+    assert (
+        policy["execute_test_ids"]
+        == ALL_TESTS
+    )
+
+    assert (
+        policy[
+            "planned_selected_test_ids"
+        ]
+        == [
+            "test-a",
+            "test-b",
+        ]
+    )
