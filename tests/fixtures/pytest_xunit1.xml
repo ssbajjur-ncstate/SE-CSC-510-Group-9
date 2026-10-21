@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<testsuite
+    name="pytest"
+    tests="4"
+    failures="1"
+    skipped="1"
+    time="4.2">
+
+    <testcase
+        classname="tests.test_checkout"
+        name="test_checkout_success"
+        file="tests/test_checkout.py"
+        line="10"
+        time="1.2" />
+
+    <testcase
+        classname="tests.test_checkout"
+        name="test_checkout_invalid_card"
+        file="tests/test_checkout.py"
+        line="20"
+        time="2.0">
+
+        <failure message="AssertionError">
+            Expected rejection
+        </failure>
+
+    </testcase>
+
+    <testcase
+        classname="tests.test_cart"
+        name="test_cart"
+        file="tests/test_cart.py"
+        line="5"
+        time="1.0">
+
+        <skipped message="not supported" />
+
+    </testcase>
+
+    <testcase
+        classname="tests.test_login"
+        name="test_login"
+        file="tests/test_login.py"
+        line="8" />
+
+</testsuite>
