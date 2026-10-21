@@ -188,6 +188,22 @@ def build_parser():
     calibrate_parser.add_argument("--min-failing-runs", type=int, default=10)
     calibrate_parser.set_defaults(handler=handle_calibrate)
 
+    migrate_parser = subparsers.add_parser(
+        "migrate",
+        help="Migrate prototype SQLite history into committed JSONL history.",
+    )
+    migrate_parser.add_argument(
+        "--db",
+        required=True,
+        help="Path to the legacy SQLite database.",
+    )
+    migrate_parser.add_argument(
+        "--history-dir",
+        default="history",
+        help="Directory containing runs.jsonl and results.jsonl (default: history)",
+    )
+    migrate_parser.set_defaults(handler=handle_migrate)
+
     return parser
 
 
@@ -483,6 +499,12 @@ def handle_calibrate(args):
         print(f"{level}: {budget['budget_fraction']} ({budget['note']})")
     print(f"Written: {args.output}")
     return 0
+
+
+def handle_migrate(args):
+    from testbudget.migrate import main as migrate_main
+
+    return migrate_main(["--db", args.db, "--history-dir", args.history_dir])
 
 
 def main(argv=None):
