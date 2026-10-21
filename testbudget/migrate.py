@@ -1,7 +1,16 @@
+import argparse
 import hashlib
+import json
+import shutil
 import sqlite3
+import sys
+import tempfile
 from pathlib import Path
 
+from testbudget.db import (
+    HistoryFormatError,
+    load_history_records,
+)
 
 class LegacyMigrationError(ValueError):
     """
@@ -317,3 +326,303 @@ def read_legacy_history(db_path):
             )
 
     return runs, results
+
+def _write_jsonl(
+    path,
+    records,
+):
+    """
+    Write a sequence of dictionaries to a JSONL file.
+    """
+
+    path = Path(path)
+
+    path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    with path.open(
+        "w",
+        encoding="utf-8",
+    ) as file:
+        for record in records:
+            file.write(
+                json.dumps(
+                    record,
+                    sort_keys=True,
+                )
+            )
+
+            file.write("\n")
+
+
+def migrate_legacy_history(
+    db_path,
+    history_dir="history",
+):
+    """
+    Migrate prototype SQLite history into committed JSONL history.
+
+    Existing JSONL history is preserved. Legacy runs that have already
+    been migrated are skipped, making migration idempotent.
+
+    The source SQLite database is opened read-only from the application's
+    perspective and is never modified or deleted.
+
+    Args:
+        db_path:
+            Path to the legacy SQLite database.
+
+        history_dir:
+            Directory containing runs.jsonl and results.jsonl.
+
+    Returns:
+        A summary dictionary containing:
+        - legacy_runs_found
+        - legacy_results_found
+        - runs_added
+        - results_added
+        - runs_skipped
+
+    Raises:
+        LegacyMigrationError:
+            If the legacy database cannot be interpreted.
+
+        HistoryFormatError:
+            If the existing or generated JSONL history is invalid.
+    """
+
+    history_dir = Path(
+        history_dir
+    )
+
+    history_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    existing_runs, existing_results = (
+        load_history_records(
+            history_dir
+        )
+    )
+
+    legacy_runs, legacy_results = (
+        read_legacy_history(
+            db_path
+        )
+    )
+
+    existing_shas = {
+        run["sha"]
+        for run in existing_runs
+    }
+
+    new_runs = [
+        run
+        for run in legacy_runs
+        if run["sha"]
+        not in existing_shas
+    ]
+
+    new_shas = {
+        run["sha"]
+        for run in new_runs
+    }
+
+    new_results = [
+        result
+        for result in legacy_results
+        if result["sha"]
+        in new_shas
+    ]
+
+    combined_runs = (
+        existing_runs
+        + new_runs
+    )
+
+    combined_results = (
+        existing_results
+        + new_results
+    )
+
+    # Build and validate the complete candidate history in a temporary
+    # directory before replacing the repository history files.
+    #
+    # This prevents malformed migration output from partially corrupting
+    # the committed history.
+
+    with tempfile.TemporaryDirectory(
+        dir=history_dir.parent
+    ) as temp_directory:
+
+        temp_history = Path(
+            temp_directory
+        )
+
+        temp_runs = (
+            temp_history
+            / "runs.jsonl"
+        )
+
+        temp_results = (
+            temp_history
+            / "results.jsonl"
+        )
+
+        _write_jsonl(
+            temp_runs,
+            combined_runs,
+        )
+
+        _write_jsonl(
+            temp_results,
+            combined_results,
+        )
+
+        # Reuse the canonical loader from PR 1 as the validation oracle.
+        load_history_records(
+            temp_history
+        )
+
+        target_runs = (
+            history_dir
+            / "runs.jsonl"
+        )
+
+        target_results = (
+            history_dir
+            / "results.jsonl"
+        )
+
+        shutil.copyfile(
+            temp_runs,
+            target_runs,
+        )
+
+        shutil.copyfile(
+            temp_results,
+            target_results,
+        )
+
+    return {
+        "legacy_runs_found": len(
+            legacy_runs
+        ),
+        "legacy_results_found": len(
+            legacy_results
+        ),
+        "runs_added": len(
+            new_runs
+        ),
+        "results_added": len(
+            new_results
+        ),
+        "runs_skipped": (
+            len(legacy_runs)
+            - len(new_runs)
+        ),
+    }
+
+
+def build_parser():
+    """
+    Build the command-line parser for legacy history migration.
+    """
+
+    parser = argparse.ArgumentParser(
+        description=(
+            "Migrate TestBudget's prototype SQLite history "
+            "into committed JSONL history."
+        )
+    )
+
+    parser.add_argument(
+        "--db",
+        required=True,
+        help=(
+            "Path to the legacy SQLite database."
+        ),
+    )
+
+    parser.add_argument(
+        "--history-dir",
+        default="history",
+        help=(
+            "Directory containing runs.jsonl and results.jsonl "
+            "(default: history)."
+        ),
+    )
+
+    return parser
+
+
+def main(argv=None):
+    """
+    Run the legacy history migration command.
+    """
+
+    parser = build_parser()
+
+    args = parser.parse_args(
+        argv
+    )
+
+    try:
+        summary = migrate_legacy_history(
+            db_path=args.db,
+            history_dir=(
+                args.history_dir
+            ),
+        )
+
+    except (
+        LegacyMigrationError,
+        HistoryFormatError,
+    ) as error:
+
+        print(
+            f"Migration failed: {error}",
+            file=sys.stderr,
+        )
+
+        return 1
+
+    print(
+        "TESTBUDGET LEGACY HISTORY MIGRATION"
+    )
+
+    print(
+        f"Legacy runs found: "
+        f"{summary['legacy_runs_found']}"
+    )
+
+    print(
+        f"Legacy results found: "
+        f"{summary['legacy_results_found']}"
+    )
+
+    print(
+        f"Runs added: "
+        f"{summary['runs_added']}"
+    )
+
+    print(
+        f"Results added: "
+        f"{summary['results_added']}"
+    )
+
+    print(
+        f"Runs already migrated: "
+        f"{summary['runs_skipped']}"
+    )
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(
+        main()
+    )
