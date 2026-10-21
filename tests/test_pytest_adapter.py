@@ -11,6 +11,9 @@ from testbudget.adapters.pytest_adapter import (
     pytest_collection_modifyitems,
 )
 
+pytest_plugins = [
+    "pytester"
+]
 
 FIXTURES = (
     Path(__file__).parent
@@ -667,3 +670,58 @@ def test_collection_unchanged_without_plan():
         checkout,
         login,
     ]
+
+def test_real_pytest_plugin_reorders_and_cuts(
+    pytester,
+):
+    pytester.makepyfile(
+        test_example="""
+def test_alpha():
+    assert True
+
+def test_beta():
+    assert True
+
+def test_gamma():
+    assert True
+"""
+    )
+
+    plan_path = (
+        pytester.path
+        / "plan.json"
+    )
+
+    write_plan(
+        plan_path,
+        [
+            (
+                "test_example.py"
+                "::test_gamma"
+            ),
+            (
+                "test_example.py"
+                "::test_alpha"
+            ),
+        ],
+    )
+
+    result = pytester.runpytest(
+        "-p",
+        "testbudget.adapters.pytest_adapter",
+        "--testbudget-plan",
+        str(plan_path),
+        "-v",
+    )
+
+    result.assert_outcomes(
+        passed=2,
+        deselected=1,
+    )
+
+    result.stdout.fnmatch_lines(
+        [
+            "*test_example.py::test_gamma*PASSED*",
+            "*test_example.py::test_alpha*PASSED*",
+        ]
+    )
