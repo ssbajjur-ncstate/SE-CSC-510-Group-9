@@ -107,6 +107,24 @@ def build_parser():
         default="HEAD",
         help="Commit SHA recorded in plan.json (default: HEAD)",
     )
+    plan_parser.add_argument(
+        "--audit",
+        action="store_true",
+        help="Run the full suite but record what TestBudget would select.",
+    )
+    plan_parser.add_argument(
+        "--reviewer-comment",
+        help="PR comment to check for a '/testbudget full' override.",
+    )
+    plan_parser.add_argument(
+        "--reviewer-permission",
+        default="read",
+        help="GitHub permission of the comment author (default: read)",
+    )
+    plan_parser.add_argument(
+        "--policy-output",
+        help="Write the execution policy (tests to run) as JSON to this path.",
+    )
     plan_parser.set_defaults(handler=handle_plan)
 
     links_parser = subparsers.add_parser(
@@ -259,9 +277,15 @@ def handle_plan(args):
         print(str(exc))
         return 1
 
+    risk = plan_risk_level(args.changed, runs, results)
+    contract_plan = build_plan(args.sha, plan, risk, args.budget)
+    try:
+        policy = _execution_policy(args, contract_plan, ranked)
+    except ValueError as exc:
+        print(str(exc))
+        return 1
     if args.output:
-        risk = plan_risk_level(args.changed, runs, results)
-        write_plan(build_plan(args.sha, plan, risk, args.budget), args.output)
+        write_plan(contract_plan, args.output)
 
     print_plan(
         changed_files=args.changed,
@@ -270,8 +294,33 @@ def handle_plan(args):
     )
     if args.output:
         print(f"Plan written: {args.output}")
+    if policy["mode"] != "normal":
+        print(
+            f"Execution mode: {policy['mode']} "
+            f"({len(policy['execute_test_ids'])} tests run, "
+            f"{len(policy['planned_selected_test_ids'])} planned)"
+        )
+    if args.policy_output:
+        write_plan(policy, args.policy_output)
+        print(f"Execution policy written: {args.policy_output}")
 
     return 0
+
+
+def _execution_policy(args, contract_plan, ranked):
+    """Return the execution policy for audit mode and reviewer overrides."""
+    from testbudget.audit import apply_reviewer_command
+    from testbudget.reviewer import parse_reviewer_command
+
+    command = None
+    if args.reviewer_comment:
+        command = parse_reviewer_command(
+            args.reviewer_comment, args.reviewer_permission
+        )
+    all_tests = [test["test_name"] for test in ranked]
+    return apply_reviewer_command(
+        contract_plan, all_tests, command, audit_mode=args.audit
+    )
 
 
 def _load_config(path):
