@@ -1,4 +1,5 @@
 """Route links: Playwright page.goto('/path') -> Next.js route file."""
+
 from __future__ import annotations
 
 import re
@@ -32,13 +33,20 @@ def build_route_table(root: Path) -> list[tuple[re.Pattern, str]]:
     for app in (root / "app", root / "src" / "app"):
         for p in app.rglob("page.*") if app.is_dir() else []:
             if p.name in PAGE_FILES:
-                segs = [s for s in p.parent.relative_to(app).parts
-                        if not (s.startswith("(") and s.endswith(")"))]
+                segs = [
+                    s
+                    for s in p.parent.relative_to(app).parts
+                    if not (s.startswith("(") and s.endswith(")"))
+                ]
                 table.append((segments_to_regex(segs), p.relative_to(root).as_posix()))
     for pages in (root / "pages", root / "src" / "pages"):
         for p in pages.rglob("*") if pages.is_dir() else []:
             rel = p.relative_to(pages)
-            if p.suffix not in PAGE_EXTS or p.name.startswith("_") or rel.parts[0] == "api":
+            if (
+                p.suffix not in PAGE_EXTS
+                or p.name.startswith("_")
+                or rel.parts[0] == "api"
+            ):
                 continue
             segs = list(rel.with_suffix("").parts)
             if segs[-1] == "index":
@@ -64,12 +72,18 @@ def resolve_route(url_path: str, table: list[tuple[re.Pattern, str]]) -> str | N
     return None
 
 
-def build_route_links(root: Path, spec_dir: str = "e2e") -> tuple[dict[str, list[dict]], dict]:
+def build_route_links(
+    root: Path, spec_dir: str = "e2e"
+) -> tuple[dict[str, list[dict]], dict]:
     """Return (links, stats). Every test in a spec links to every route that spec visits."""
     table = build_route_table(root)
     links: dict[str, list[dict]] = {}
     total = resolved = 0
-    specs = sorted((root / spec_dir).rglob("*.spec.*")) if (root / spec_dir).is_dir() else []
+    specs = (
+        sorted((root / spec_dir).rglob("*.spec.*"))
+        if (root / spec_dir).is_dir()
+        else []
+    )
     for spec in specs:
         source = spec.read_text(encoding="utf-8", errors="ignore")
         paths, calls = extract_goto_paths(source)
