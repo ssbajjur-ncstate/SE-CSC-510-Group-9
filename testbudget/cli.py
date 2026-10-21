@@ -244,25 +244,25 @@ def print_plan(changed_files, ranked_tests, plan):
 
 
 def handle_links(args):
-   from testbudget.links.report import (
-       format_report,
-       read_links_file,
-       summarize_links,
-   )
+    from testbudget.links.report import (
+        format_report,
+        read_links_file,
+        summarize_links,
+    )
 
-   if not args.report:
-       print("Nothing to do. Use --report.")
-       return 1
+    if not args.report:
+        print("Nothing to do. Use --report.")
+        return 1
 
-   try:
-       links = read_links_file(args.links)
-   except (FileNotFoundError, ValueError) as exc:
-       print(str(exc))
-       return 1
+    try:
+        links = read_links_file(args.links)
+    except (FileNotFoundError, ValueError) as exc:
+        print(str(exc))
+        return 1
 
-   print(format_report(summarize_links(links)))
+    print(format_report(summarize_links(links)))
 
-   return 0
+    return 0
 
 
 def main(argv=None):
