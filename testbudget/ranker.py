@@ -1,23 +1,36 @@
 import json
+from collections.abc import Iterable
+from pathlib import Path
+from typing import Any
 
-def load_links(path):
+
+def load_links(path: str | Path) -> dict[str, list[str]]:
     """
     Load the changed-file-to-test mapping from JSON.
     """
-    with open(path, "r", encoding="utf-8") as file:
-        return json.load(file)
+    with open(path, encoding="utf-8") as file:
+        links: dict[str, list[str]] = json.load(file)
+    return links
 
-def get_linked_tests(changed_files, links):
+
+def get_linked_tests(
+    changed_files: Iterable[str], links: dict[str, list[str]]
+) -> set[str]:
     """
     Return all tests linked to any of the changed files.
     """
-    linked_tests = set()
+    linked_tests: set[str] = set()
     for changed_file in changed_files:
         for test_name in links.get(changed_file, []):
             linked_tests.add(test_name)
     return linked_tests
 
-def rank_tests(stats, changed_files, links):
+
+def rank_tests(
+    stats: list[dict[str, Any]],
+    changed_files: Iterable[str],
+    links: dict[str, list[str]],
+) -> list[dict[str, Any]]:
     """
     Rank tests using a simple baseline score.
     Inputs:
@@ -39,21 +52,21 @@ def rank_tests(stats, changed_files, links):
     TestBudget research ranking algorithm.
     """
     linked_tests = get_linked_tests(changed_files, links)
-    ranked = []
+    ranked: list[dict[str, Any]] = []
     for test in stats:
         test_name = test["test_name"]
         failure_count = test.get("failure_count", 0)
         avg_duration = float(test.get("avg_duration", 0.0))
         is_linked = test_name in linked_tests
-        
+
         change_score = 10 if is_linked else 0
         failure_score = failure_count * 5
-        
+
         # Avoid dividing by zero if runtime data is missing.
         safe_duration = max(avg_duration, 0.1)
         score = (change_score + failure_score) / safe_duration
-        
-        reasons = []
+
+        reasons: list[str] = []
         if is_linked:
             reasons.append("changed file")
         if failure_count > 0:
@@ -64,7 +77,7 @@ def rank_tests(stats, changed_files, links):
             )
         if not reasons:
             reasons.append("historical runtime")
-            
+
         ranked.append(
             {
                 "test_name": test_name,
@@ -75,11 +88,9 @@ def rank_tests(stats, changed_files, links):
                 "reason": " + ".join(reasons),
             }
         )
-        
+
     # Highest score first.
     # test_name is the secondary sort key so identical inputs
     # always produce the same ordering.
-    ranked.sort(
-        key=lambda test: (-test["score"], test["test_name"])
-    )
+    ranked.sort(key=lambda test: (-test["score"], test["test_name"]))
     return ranked
