@@ -1,11 +1,10 @@
-from testbudget.ingest import parse_junit
 from testbudget.db import (
-    init_db,
-    insert_test_results,
     get_all_results,
     get_test_stats,
+    init_db,
+    insert_test_results,
 )
-
+from testbudget.ingest import parse_junit
 
 FIXTURE = "fixtures/sample_junit.xml"
 
@@ -19,18 +18,11 @@ def test_parser_reads_all_testcases():
 def test_parser_detects_failures():
     results = parse_junit(FIXTURE)
 
-    failed = [
-        result
-        for result in results
-        if result["status"] == "failed"
-    ]
+    failed = [result for result in results if result["status"] == "failed"]
 
     assert len(failed) == 2
 
-    failed_names = {
-        result["test_name"]
-        for result in failed
-    }
+    failed_names = {result["test_name"] for result in failed}
 
     assert "test_checkout_invalid_card" in failed_names
     assert "test_payment_timeout" in failed_names
@@ -40,9 +32,7 @@ def test_parser_extracts_duration():
     results = parse_junit(FIXTURE)
 
     checkout = next(
-        result
-        for result in results
-        if result["test_name"] == "test_checkout_success"
+        result for result in results if result["test_name"] == "test_checkout_success"
     )
 
     assert checkout["duration"] == 3.2
@@ -84,9 +74,7 @@ def test_stats_calculate_run_count(tmp_path):
     stats = get_test_stats(db_path)
 
     checkout = next(
-        item
-        for item in stats
-        if item["test_name"] == "test_checkout_invalid_card"
+        item for item in stats if item["test_name"] == "test_checkout_invalid_card"
     )
 
     assert checkout["run_count"] == 1
@@ -113,9 +101,7 @@ def test_stats_calculate_failure_count(tmp_path):
     stats = get_test_stats(db_path)
 
     checkout = next(
-        item
-        for item in stats
-        if item["test_name"] == "test_checkout_invalid_card"
+        item for item in stats if item["test_name"] == "test_checkout_invalid_card"
     )
 
     assert checkout["run_count"] == 2
