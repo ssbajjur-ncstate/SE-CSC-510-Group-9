@@ -18,6 +18,11 @@ TestBudget is a prototype GitHub-oriented test planning tool that uses a reposit
 [![mypy](https://img.shields.io/badge/types-mypy-blue.svg)](https://mypy-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+## Videos
+
+- [Teaser (about 1 min)](https://drive.google.com/file/d/1horyyjAXQvJeCjIg9lswkspj3SyDPIqt/view?usp=sharing)
+- [Full demo walkthrough (about 5 min)](https://drive.google.com/file/d/1riH03BYmTgAq4Tilc-SkUVM-C4j8yJ3E/view?usp=sharing)
+
 
 ## What
 

@@ -28,7 +28,7 @@ Self-assessed repo rubric for TestBudget (CSC 510, Group 9), repo [SE-CSC-510-Gr
 
 | Item | Evidence | Score 0-3 |
 | --- | --- | --- |
-| Tests exist, expected and failure cases | [tests folder](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/tree/main/tests), 374 tests passing at the last local run | 3 |
+| Tests exist, expected and failure cases | [tests folder](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/tree/main/tests), 422 tests passing at the last local run | 3 |
 | Tests are a serious share of the code base | [tests folder](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/tree/main/tests), well over 30 percent of the Python lines | 3 |
 | Tests run automatically on every commit | [CI workflow](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/blob/main/.github/workflows/ci.yml), runs on pull requests and pushes to main | 2 |
 | Coverage is measured; the badge shows the number | [CI workflow](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/blob/main/.github/workflows/ci.yml), 91% measured with pytest-cov, no badge yet | 1 |
@@ -41,8 +41,8 @@ Self-assessed repo rubric for TestBudget (CSC 510, Group 9), repo [SE-CSC-510-Gr
 | The WHAT: each class and function described | [API reference](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/blob/main/docs/api.md) | 2 |
 | The HOW: mini-tutorials with worked examples | [links tutorial](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/blob/main/docs/links.md), [pytest adapter](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/blob/main/docs/pytest-adapter.md), [Playwright adapter](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/blob/main/docs/playwright-adapter.md) | 2 |
 | The WHY: the docs tell a story | [docs index](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/blob/main/docs/index.md) | 2 |
-| Teaser video at the top of the README | none yet | 3 |
-| Feature walk-through video linked in the README | none yet | 3 |
+| Teaser video at the top of the README | Done: [teaser, about 1 min](https://drive.google.com/file/d/1horyyjAXQvJeCjIg9lswkspj3SyDPIqt/view?usp=sharing), linked under Videos in the README | 3 |
+| Feature walk-through video linked in the README | Done: [demo walkthrough, about 5 min](https://drive.google.com/file/d/1riH03BYmTgAq4Tilc-SkUVM-C4j8yJ3E/view?usp=sharing), linked under Videos in the README | 3 |
 
 ## Standard files and bling
 
