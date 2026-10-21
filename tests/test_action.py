@@ -41,3 +41,10 @@ def test_action_installs_from_its_own_path_not_the_callers_workspace():
     install = next(s for s in steps if s.get("name") == "Install TestBudget")["run"]
     assert "github.action_path" in install
     assert "github.workspace" not in install
+
+
+def test_action_installs_from_its_own_path_not_the_callers_workspace():
+    steps = load("action.yml")["runs"]["steps"]
+    install = next(s for s in steps if s.get("name") == "Install TestBudget")["run"]
+    assert "github.action_path" in install
+    assert "github.workspace" not in install
