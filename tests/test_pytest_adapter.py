@@ -4,11 +4,11 @@ import pytest
 
 from testbudget.adapters.pytest_adapter import (
     PytestAdapterError,
+    item_to_test_id,
     load_selected_test_ids,
     normalize_pytest_test_id,
     parse_pytest_junit,
     pytest_collection_modifyitems,
-    pytest_item_to_test_id,
 )
 
 
@@ -528,7 +528,7 @@ def test_pytest_item_to_test_id_removes_class_component():
     )
 
     assert (
-        pytest_item_to_test_id(
+        item_to_test_id(
             item
         )
         == (
@@ -536,7 +536,6 @@ def test_pytest_item_to_test_id_removes_class_component():
             "::test_add_item"
         )
     )
-
 
 def test_collection_is_reordered_to_plan(
     tmp_path,

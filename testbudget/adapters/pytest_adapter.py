@@ -398,7 +398,7 @@ def load_selected_test_ids(
     return selected_ids
 
 
-def pytest_item_to_test_id(item):
+def item_to_test_id(item):
     """
     Convert a collected pytest item into TestBudget's `path::name` identity.
 
@@ -497,7 +497,7 @@ def pytest_collection_modifyitems(
     for item in items:
         try:
             test_id = (
-                pytest_item_to_test_id(
+                item_to_test_id(
                     item
                 )
             )
