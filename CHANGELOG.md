@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- `testbudget plan --audit`, `--reviewer-comment` and `--policy-output` expose audit mode and `/testbudget full` overrides.
 - Rewrote README (what, why, how, quickstart), added badges, Codecov upload, CITATION.cff and .zenodo.json.
 - `testbudget calibrate --replay <csv> [--output testbudget.yml]` writes calibrated per-risk-level budgets.
 - `testbudget links --build [--output links.json]` builds the link map from imports, routes, co-failures and pins.
