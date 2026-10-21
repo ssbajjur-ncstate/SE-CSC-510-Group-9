@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from testbudget.cli import main
 from testbudget.db import get_all_results
 
@@ -525,3 +527,26 @@ def test_migrate_rejects_missing_database(tmp_path, capsys):
 
     assert exit_code == 1
     assert "Migration failed" in capsys.readouterr().err
+
+
+def test_plan_runs_with_both_rankers_on_fixtures(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+    orders = {}
+    for ranker in ("coverage", "baseline"):
+        output_path = tmp_path / f"{ranker}.json"
+        exit_code = main(
+            _plan_args(db_path, "--ranker", ranker, "--output", str(output_path))
+        )
+        assert exit_code == 0
+        plan = json.loads(output_path.read_text(encoding="utf-8"))
+        orders[ranker] = plan["selected"] + plan["skipped"]
+    assert len(orders["coverage"]) == len(orders["baseline"]) == 5
+    assert "covers src/checkout.py" in capsys.readouterr().out
+
+
+def test_plan_rejects_unknown_ranker(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+    with pytest.raises(SystemExit):
+        main(_plan_args(db_path, "--ranker", "random"))

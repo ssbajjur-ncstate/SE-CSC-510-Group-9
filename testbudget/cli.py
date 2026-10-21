@@ -12,6 +12,7 @@ from testbudget.db import (
 )
 from testbudget.ingest import parse_junit
 from testbudget.plan import build_plan, plan_risk_level, write_plan
+from testbudget.riskmap import file_failure_weights
 from testbudget.rules import RuleContext
 
 DEFAULT_DB = "testbudget.db"
@@ -106,6 +107,12 @@ def build_parser():
         "--sha",
         default="HEAD",
         help="Commit SHA recorded in plan.json (default: HEAD)",
+    )
+    plan_parser.add_argument(
+        "--ranker",
+        choices=["coverage", "baseline"],
+        default="coverage",
+        help="Ranking strategy (default: coverage)",
     )
     plan_parser.add_argument(
         "--audit",
@@ -249,7 +256,7 @@ def handle_plan(args):
     # Member 2 may still be working when this file is first written.
     # Lazy imports allow init/ingest to work before M2 is merged.
     try:
-        from testbudget.ranker import load_links, rank_tests
+        from testbudget.ranker import load_links, rank_tests, rank_tests_coverage
         from testbudget.selector import select_with_rules
     except ImportError:
         print("Ranking subsystem is not available yet. Merge M2 before running plan.")
@@ -273,15 +280,15 @@ def handle_plan(args):
 
     links = load_links(links_path)
 
-    ranked = rank_tests(
-        stats,
-        args.changed,
-        links,
-    )
-
     try:
         config = _load_config(args.config)
         runs, results = _load_history(args.history)
+        if args.ranker == "baseline":
+            ranked = rank_tests(stats, args.changed, links)
+        else:
+            weights = file_failure_weights(runs, results)
+            stats = _with_last_failure(stats, runs, results)
+            ranked = rank_tests_coverage(stats, args.changed, links, weights)
         context = RuleContext(
             config=config,
             changed_files=args.changed,
@@ -337,6 +344,17 @@ def _execution_policy(args, contract_plan, ranked):
     return apply_reviewer_command(
         contract_plan, all_tests, command, audit_mode=args.audit
     )
+
+
+def _with_last_failure(stats, runs, results):
+    """Return stats with ``last_failure``, the latest failing run timestamp."""
+    timestamps = {run["sha"]: run["timestamp"] for run in runs}
+    last: dict[str, str] = {}
+    for result in results:
+        stamp = timestamps.get(result["sha"])
+        if result["status"] == "failed" and stamp:
+            last[result["test_id"]] = max(stamp, last.get(result["test_id"], stamp))
+    return [{**test, "last_failure": last.get(test["test_name"])} for test in stats]
 
 
 def _load_config(path):
