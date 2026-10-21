@@ -12,9 +12,12 @@ def read_links_file(path: str | Path) -> dict:
     if not p.exists():
         raise FileNotFoundError(f"links file not found: {path}")
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        data = json.loads(p.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         raise ValueError(f"{path}: not valid JSON") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: expected a JSON object mapping test IDs to links")
+    return data
 
 
 def summarize_links(links: dict) -> dict:
@@ -23,10 +26,15 @@ def summarize_links(links: dict) -> dict:
     linked = 0
     total = 0
     for entries in links.values():
+        if not isinstance(entries, list):
+            entries = []
         if entries:
             linked += 1
         for entry in entries:
-            by_source[entry.get("source", "unknown")] += 1
+            if isinstance(entry, dict):
+                by_source[entry.get("source", "unknown")] += 1
+            else:
+                by_source["unlabelled"] += 1
             total += 1
     return {
         "tests": len(links),
