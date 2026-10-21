@@ -1,13 +1,10 @@
-
 from scripts.data_check import check_history
 
 
 def test_empty_history_reports_zero_runs(tmp_path):
     rows = check_history(tmp_path)
 
-    summary = next(
-        row for row in rows if row["category"] == "run_summary"
-    )
+    summary = next(row for row in rows if row["category"] == "run_summary")
 
     assert summary["total"] == 0
     assert summary["failing_runs"] == 0
@@ -35,9 +32,7 @@ def test_counts_runs_and_failing_runs(tmp_path):
 
     rows = check_history(history_dir)
 
-    summary = next(
-        row for row in rows if row["category"] == "run_summary"
-    )
+    summary = next(row for row in rows if row["category"] == "run_summary")
 
     assert summary["total"] == 2
     assert summary["failing_runs"] == 1
