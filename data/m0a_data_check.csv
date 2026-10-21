@@ -1,0 +1,4 @@
+category,total,passed,failed,skipped,failing_runs,flake_filtered_failing_runs,risk_level,risk_level_counts_available,note
+runs,0,0,0,0,,,unavailable,False,
+test_results,0,0,0,0,,,unavailable,False,
+run_summary,0,,,,0,0,unavailable,False,No historical runs recorded; budget decision cannot be made
