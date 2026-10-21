@@ -614,3 +614,53 @@ def test_plan_without_selected_raises_error(
         load_playwright_test_ids(
             plan
         )
+
+
+
+def test_repeated_testcase_entries_are_deduplicated(
+    tmp_path,
+):
+    report = (
+        tmp_path / "repeated.xml"
+    )
+
+    report.write_text(
+        """
+        <testsuites>
+            <testsuite name="tests/cart.spec.ts">
+
+                <testcase
+                    classname="tests/cart.spec.ts"
+                    name="cart works"
+                    time="1.5"
+                >
+                    <failure message="first failure" />
+                </testcase>
+
+                <testcase
+                    classname="tests/cart.spec.ts"
+                    name="cart works"
+                    time="0.6"
+                />
+
+            </testsuite>
+        </testsuites>
+        """,
+        encoding="utf-8",
+    )
+
+    results = parse_playwright_junit(
+        report
+    )
+
+    assert len(results) == 1
+
+    assert results[0] == {
+        "test_id": (
+            "tests/cart.spec.ts "
+            "› cart works"
+        ),
+        "status": "passed",
+        "duration_s": 0.6,
+        "attempt": 2,
+    }
