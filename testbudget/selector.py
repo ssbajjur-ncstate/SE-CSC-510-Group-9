@@ -1,4 +1,9 @@
-def select_with_budget(ranked_tests, budget):
+from typing import Any
+
+
+def select_with_budget(
+    ranked_tests: list[dict[str, Any]], budget: float
+) -> dict[str, Any]:
     """
     Select ranked tests while staying within the supplied time budget.
     Tests are considered in ranking order.
@@ -7,11 +12,11 @@ def select_with_budget(ranked_tests, budget):
     """
     if budget < 0:
         raise ValueError("Budget cannot be negative")
-    
-    selected = []
-    skipped = []
+
+    selected: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
     used_time = 0.0
-    
+
     for test in ranked_tests:
         duration = float(test.get("duration", 0.0))
         if used_time + duration <= budget:
@@ -21,7 +26,7 @@ def select_with_budget(ranked_tests, budget):
             skipped_test = dict(test)
             skipped_test["skip_reason"] = "budget exhausted"
             skipped.append(skipped_test)
-            
+
     return {
         "selected": selected,
         "skipped": skipped,
