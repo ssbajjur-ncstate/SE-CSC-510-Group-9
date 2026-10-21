@@ -1,4 +1,8 @@
 import json
+import subprocess
+import sys
+
+import pytest
 
 from testbudget.cli import main
 from testbudget.db import get_all_results
@@ -81,9 +85,9 @@ def test_plan_prints_selected_and_skipped_tests(tmp_path, capsys):
         json.dumps(
             {
                 "src/checkout.py": [
-                    "test_checkout_success",
-                    "test_checkout_invalid_card",
-                    "test_payment_timeout",
+                    "tests/test_checkout.py::test_checkout_success",
+                    "tests/test_checkout.py::test_checkout_invalid_card",
+                    "tests/test_payment.py::test_payment_timeout",
                 ]
             }
         ),
@@ -129,7 +133,7 @@ def test_plan_prints_selected_and_skipped_tests(tmp_path, capsys):
     assert "SELECTED" in output
     assert "SKIPPED" in output
     assert "Estimated runtime" in output
-    assert "test_checkout_invalid_card" in output
+    assert "tests/test_checkout.py::test_checkout_invalid_card" in output
 
 
 def test_plan_rejects_empty_history(tmp_path, capsys):
@@ -240,3 +244,376 @@ def test_links_without_report_flag_does_nothing(capsys):
 
     assert main(["links"]) == 1
     assert "Use --report" in capsys.readouterr().out
+
+
+def test_plan_writes_plan_json_with_forced_pin_on_fixtures(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    config_path = tmp_path / "testbudget.yml"
+    output_path = tmp_path / "plan.json"
+    config_path.write_text(
+        "pins:\n  - tests/test_login.py::test_login_success\n", encoding="utf-8"
+    )
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(
+        [
+            "plan",
+            "--changed",
+            "src/checkout.py",
+            "--budget",
+            "0",
+            "--db",
+            str(db_path),
+            "--links",
+            "fixtures/test_links.json",
+            "--config",
+            str(config_path),
+            "--history",
+            "fixtures/history_small",
+            "--sha",
+            "abc123",
+            "--output",
+            str(output_path),
+        ]
+    )
+
+    assert exit_code == 0
+    plan = json.loads(output_path.read_text(encoding="utf-8"))
+    assert plan["sha"] == "abc123"
+    assert plan["risk_level"] in {"low", "medium", "high"}
+    assert [t["test_id"] for t in plan["selected"]] == [
+        "tests/test_login.py::test_login_success"
+    ]
+    assert all({"skip_reason", "skip_debt"} <= set(t) for t in plan["skipped"])
+
+
+def test_plan_rejects_malformed_config(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    config_path = tmp_path / "testbudget.yml"
+    config_path.write_text("pins: 3\n", encoding="utf-8")
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(
+        [
+            "plan",
+            "--changed",
+            "src/checkout.py",
+            "--budget",
+            "5",
+            "--db",
+            str(db_path),
+            "--links",
+            "fixtures/test_links.json",
+            "--config",
+            str(config_path),
+        ]
+    )
+
+    assert exit_code == 1
+    assert "pins must be" in capsys.readouterr().out
+
+
+def test_links_build_writes_every_source_on_fixtures(tmp_path, capsys):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "pay.py").write_text("X = 1\n", encoding="utf-8")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_pay.py").write_text(
+        "from src.pay import X\n\n\ndef test_charge():\n    assert X\n",
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "testbudget.yml"
+    config_path.write_text(
+        "pins:\n  tests/test_pay.py::test_charge: [src/pay.py]\n", encoding="utf-8"
+    )
+    output_path = tmp_path / "links.json"
+
+    exit_code = main(
+        [
+            "links",
+            "--build",
+            "--report",
+            "--root",
+            str(tmp_path),
+            "--history",
+            "fixtures/history_small",
+            "--config",
+            str(config_path),
+            "--output",
+            str(output_path),
+        ]
+    )
+
+    assert exit_code == 0
+    links = json.loads(output_path.read_text(encoding="utf-8"))
+    sources = {entry["source"] for entry in links["tests/test_pay.py::test_charge"]}
+    assert {"import", "cofail", "pin"} <= sources
+    assert "Links written" in capsys.readouterr().out
+
+
+def test_links_build_rejects_malformed_config(tmp_path, capsys):
+    config_path = tmp_path / "testbudget.yml"
+    config_path.write_text("pins: [a, b]\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "links",
+            "--build",
+            "--root",
+            str(tmp_path),
+            "--history",
+            str(tmp_path / "missing"),
+            "--config",
+            str(config_path),
+            "--output",
+            str(tmp_path / "links.json"),
+        ]
+    )
+
+    assert exit_code == 1
+    assert "pins must map" in capsys.readouterr().out
+
+
+def test_calibrate_writes_budgets_from_replay_fixture(tmp_path, capsys):
+    output_path = tmp_path / "testbudget.yml"
+    output_path.write_text("pins: []\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "calibrate",
+            "--replay",
+            "fixtures/replay_synthetic.csv",
+            "--output",
+            str(output_path),
+        ]
+    )
+
+    assert exit_code == 0
+    text = output_path.read_text(encoding="utf-8")
+    assert text.startswith("pins: []\n")
+    for level in ("low", "medium", "high"):
+        assert f"  {level}:" in text
+    assert "Calibrated budgets" in capsys.readouterr().out
+
+
+def test_calibrate_rejects_missing_replay_file(tmp_path, capsys):
+    exit_code = main(
+        [
+            "calibrate",
+            "--replay",
+            str(tmp_path / "missing.csv"),
+            "--output",
+            str(tmp_path / "testbudget.yml"),
+        ]
+    )
+
+    assert exit_code == 1
+    assert not (tmp_path / "testbudget.yml").exists()
+
+
+def test_calibrate_rejects_floor_above_ceiling(tmp_path, capsys):
+    exit_code = main(
+        [
+            "calibrate",
+            "--replay",
+            "fixtures/replay_synthetic.csv",
+            "--floor",
+            "0.9",
+            "--ceiling",
+            "0.5",
+            "--output",
+            str(tmp_path / "testbudget.yml"),
+        ]
+    )
+
+    assert exit_code == 1
+    assert "floor and ceiling" in capsys.readouterr().out
+
+
+def _plan_args(db_path, *extra):
+    return [
+        "plan",
+        "--changed",
+        "src/checkout.py",
+        "--budget",
+        "2",
+        "--db",
+        str(db_path),
+        "--links",
+        "fixtures/test_links.json",
+        "--history",
+        "fixtures/history_small",
+        *extra,
+    ]
+
+
+def test_plan_audit_runs_every_test_but_keeps_the_plan(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    policy_path = tmp_path / "policy.json"
+    plan_path = tmp_path / "plan.json"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(
+        _plan_args(
+            db_path,
+            "--audit",
+            "--output",
+            str(plan_path),
+            "--policy-output",
+            str(policy_path),
+        )
+    )
+
+    assert exit_code == 0
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert policy["mode"] == "audit"
+    assert len(policy["execute_test_ids"]) == 5
+    assert len(plan["selected"]) < 5
+    assert "Execution mode: audit" in capsys.readouterr().out
+
+
+def test_plan_reviewer_full_override_runs_every_test(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    policy_path = tmp_path / "policy.json"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(
+        _plan_args(
+            db_path,
+            "--reviewer-comment",
+            "/testbudget full",
+            "--reviewer-permission",
+            "write",
+            "--policy-output",
+            str(policy_path),
+        )
+    )
+
+    assert exit_code == 0
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    assert policy["mode"] == "reviewer_full"
+
+
+def test_plan_rejects_unauthorized_reviewer_override(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(_plan_args(db_path, "--reviewer-comment", "/testbudget full"))
+
+    assert exit_code == 1
+
+
+def test_migrate_moves_ingested_history_into_jsonl(tmp_path, capsys):
+    from testbudget.db import load_history_records
+
+    db_path = tmp_path / "legacy.db"
+    history_dir = tmp_path / "history"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(
+        ["migrate", "--db", str(db_path), "--history-dir", str(history_dir)]
+    )
+
+    assert exit_code == 0
+    runs, results = load_history_records(history_dir)
+    assert len(runs) == 1
+    assert len(results) == 5
+    assert "tests/test_cart.py::test_add_to_cart" in {r["test_id"] for r in results}
+
+
+def test_migrate_rejects_missing_database(tmp_path, capsys):
+    exit_code = main(
+        [
+            "migrate",
+            "--db",
+            str(tmp_path / "missing.db"),
+            "--history-dir",
+            str(tmp_path / "history"),
+        ]
+    )
+
+    assert exit_code == 1
+    assert "Migration failed" in capsys.readouterr().err
+
+
+def test_plan_runs_with_both_rankers_on_fixtures(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+    orders = {}
+    for ranker in ("coverage", "baseline"):
+        output_path = tmp_path / f"{ranker}.json"
+        exit_code = main(
+            _plan_args(db_path, "--ranker", ranker, "--output", str(output_path))
+        )
+        assert exit_code == 0
+        plan = json.loads(output_path.read_text(encoding="utf-8"))
+        orders[ranker] = plan["selected"] + plan["skipped"]
+    assert len(orders["coverage"]) == len(orders["baseline"]) == 5
+    assert "covers src/checkout.py" in capsys.readouterr().out
+
+
+def test_plan_rejects_unknown_ranker(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+    with pytest.raises(SystemExit):
+        main(_plan_args(db_path, "--ranker", "random"))
+
+
+def test_ingest_rejects_testcase_without_path(tmp_path, capsys):
+    xml_path = tmp_path / "bad.xml"
+    xml_path.write_text(
+        '<testsuite><testcase name="test_orphan" /></testsuite>', encoding="utf-8"
+    )
+
+    exit_code = main(["ingest", str(xml_path), "--db", str(tmp_path / "x.db")])
+
+    assert exit_code == 1
+    assert "Cannot ingest" in capsys.readouterr().out
+
+
+def test_plan_reads_links_written_by_links_build(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    links_path = tmp_path / "links.json"
+    links_path.write_text(
+        json.dumps(
+            {
+                "tests/test_checkout.py::test_checkout_invalid_card": [
+                    {"file": "src/checkout.py", "source": "import", "weight": 1.0}
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+    capsys.readouterr()
+
+    args = _plan_args(db_path, "--ranker", "baseline")
+    args[args.index("fixtures/test_links.json")] = str(links_path)
+
+    assert main(args) == 0
+    first = capsys.readouterr().out.split("RANKED TESTS")[1].splitlines()[1]
+    assert "tests/test_checkout.py::test_checkout_invalid_card" in first
+    assert "no changed file" not in first
+
+
+def test_plan_rejects_malformed_links_file(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    links_path = tmp_path / "links.json"
+    links_path.write_text("[1, 2]", encoding="utf-8")
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    args = _plan_args(db_path)
+    args[args.index("fixtures/test_links.json")] = str(links_path)
+
+    assert main(args) == 1
+    assert "links file must map keys to lists" in capsys.readouterr().out
+
+
+def test_cli_imports_without_pytest_installed():
+    code = "import sys; sys.modules['pytest'] = None; import testbudget.cli"
+
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False
+    )
+
+    assert result.returncode == 0, result.stderr

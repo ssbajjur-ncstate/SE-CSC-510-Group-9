@@ -1,0 +1,14 @@
+{
+  "sha": "abc1234",
+  "risk_level": "medium",
+  "budget_s": 120,
+  "selected": [
+    {"test_id": "tests/test_checkout.py::test_pay", "reason": "changed file + 2 historical failures", "duration_s": 4.2},
+    {"test_id": "tests/test_cart.py::test_total", "reason": "pinned", "duration_s": 1.1}
+  ],
+  "skipped": [
+    {"test_id": "tests/test_profile.py::test_avatar", "skip_reason": "over budget", "skip_debt": 2},
+    {"test_id": "e2e/home.spec.ts › loads home page", "skip_reason": "not linked to change", "skip_debt": 0}
+  ],
+  "catch_rate_estimate": 0.87
+}

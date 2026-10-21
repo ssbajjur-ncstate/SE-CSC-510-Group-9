@@ -1,0 +1,18 @@
+site_name: TestBudget
+site_description: Run the tests that matter within a time budget.
+repo_url: https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9
+theme:
+  name: material
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+nav:
+  - Why TestBudget: index.md
+  - How to: links.md
+  - API reference: api.md
+  - Evaluation protocol: eval-protocol.md
+  - Self-assessment: self-assessment.md

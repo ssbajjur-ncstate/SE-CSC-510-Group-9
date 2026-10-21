@@ -95,6 +95,10 @@ def _legacy_test_id(
 
     test_name = test_name.strip()
 
+    # Rows ingested after #128 already hold the path::name ID.
+    if "::" in test_name:
+        return test_name
+
     if isinstance(test_file, str) and test_file.strip():
         test_file = test_file.strip()
 
@@ -191,7 +195,7 @@ def read_legacy_history(db_path):
     finally:
         connection.close()
 
-    groups = {}
+    groups: dict[tuple[str, str | None], list[sqlite3.Row]] = {}
 
     for row in rows:
         created_at = row["created_at"]

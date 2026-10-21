@@ -36,8 +36,10 @@ def _entry(test: dict, linked: bool, score: float, reason: str) -> dict:
 def _finish(
     ordered: list[dict], linked: set[str], reasons: dict[str, str]
 ) -> list[dict]:
-    """Turn an ordered list of stats entries into ranked entries
-(top = highest score)."""
+    """Turn an ordered list of stats entries into ranked entries.
+
+    Top = highest score.
+    """
     total = len(ordered)
     return [
         _entry(t, t["test_name"] in linked, float(total - i), reasons[t["test_name"]])
@@ -98,7 +100,9 @@ def rank_recently_modified(stats, changed_files, links):
 
 def rank_import_only(stats, changed_files, links):
     """Import-only: tests linked to a changed file first, no history used.
-Ties break on name."""
+
+    Ties break on name.
+    """
     linked = get_linked_tests(changed_files, links)
     ordered = sorted(
         stats, key=lambda t: (t["test_name"] not in linked, t["test_name"])
