@@ -25,7 +25,13 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Run tests with coverage
-        run: python -m pytest --cov=testbudget --cov-report=xml
+        run: python -m pytest --cov=testbudget --cov-report=xml --cov-report=term
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
 
       - name: Run Ruff lint
         run: python -m ruff check .
@@ -36,9 +42,48 @@ jobs:
       - name: Run mypy
         run: python -m mypy
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+  coverage-badge:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.xml
-          fail_ci_if_error: false
+          name: coverage-xml
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Generate coverage badge
+        run: |
+          python -m pip install "genbadge[coverage]"
+          genbadge coverage -i coverage.xml -o coverage.svg
+
+      - name: Commit badge to the badges branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir "$RUNNER_TEMP/badges" && cd "$RUNNER_TEMP/badges"
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch -q --depth 1 origin badges; then
+            git checkout -q -b badges FETCH_HEAD
+          else
+            git checkout -q --orphan badges
+          fi
+          cp "$GITHUB_WORKSPACE/coverage.svg" coverage.svg
+          git add coverage.svg
+          if git diff --cached --quiet; then
+            echo "Badge unchanged"
+          else
+            git commit -q -m "chore: update coverage badge"
+            git push -q origin badges
+          fi
