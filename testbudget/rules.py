@@ -288,3 +288,71 @@ def apply_rotation_limit(
         copy["forced"] = copy["skip_debt"] >= limit
         tests.append(copy)
     return tests
+
+
+LOCKFILES = frozenset(
+    {
+        "Cargo.lock",
+        "Gemfile.lock",
+        "Pipfile.lock",
+        "composer.lock",
+        "go.sum",
+        "npm-shrinkwrap.json",
+        "package-lock.json",
+        "pnpm-lock.yaml",
+        "poetry.lock",
+        "uv.lock",
+        "yarn.lock",
+    }
+)
+CI_CONFIG_DIRS = (".github/workflows/", ".github/actions/", ".circleci/")
+CI_CONFIG_FILES = frozenset(
+    {".gitlab-ci.yml", ".travis.yml", "azure-pipelines.yml", "Jenkinsfile"}
+)
+
+
+def _changed_file_trigger(path: str) -> str | None:
+    """Return why a changed path triggers the full suite, or None."""
+    name = path.rsplit("/", 1)[-1]
+    if name in LOCKFILES:
+        return f"lockfile changed: {path}"
+    if path.startswith(CI_CONFIG_DIRS) or path in CI_CONFIG_FILES:
+        return f"CI config changed: {path}"
+    if name == ".env" or name.startswith(".env."):
+        return f"environment file changed: {path}"
+    return None
+
+
+def full_suite_trigger(context: RuleContext) -> str | None:
+    """
+    Return why the whole suite must run, or None if the rules may cut it.
+
+    Triggers: a changed lockfile, CI config (GitHub Actions workflows and
+    actions, CircleCI, GitLab, Travis, Azure, Jenkins), a ``.env`` or
+    ``.env.*`` file anywhere in the tree, a tag ref, or a release ref.
+    Args:
+        context: Rule context; reads ``changed_files`` and ``ref``.
+    Returns:
+        A reason string naming the first trigger in sorted path order, then
+        the ref; None if nothing triggers.
+    Raises:
+        TypeError: If ``changed_files`` is a single string.
+        ValueError: If ``ref`` is given but is not a non-empty string.
+    """
+    if isinstance(context.changed_files, str):
+        raise TypeError("changed_files must be a list of paths, not a string")
+    for path in sorted(_normalise_path(path) for path in context.changed_files):
+        reason = _changed_file_trigger(path)
+        if reason:
+            return reason
+    ref = context.ref
+    if ref is None:
+        return None
+    if not isinstance(ref, str) or not ref.strip():
+        raise ValueError(f"ref must be a non-empty string, got {ref!r}")
+    if ref.startswith("refs/tags/"):
+        return f"tag ref: {ref}"
+    branch = ref.removeprefix("refs/heads/")
+    if branch == "release" or branch.startswith("release/"):
+        return f"release ref: {ref}"
+    return None

@@ -8,6 +8,7 @@ from testbudget.rules import (
     changed_tests_next,
     compute_skip_debt,
     file_of_test,
+    full_suite_trigger,
     ordered_shas,
     pin_first,
     pinned_tests,
@@ -291,3 +292,59 @@ def test_test_past_the_rotation_limit_is_always_forced(ids, limit, extra, data):
         t["test_name"] for t in apply_rotation_limit(ranked, context) if t["forced"]
     }
     assert target in forced
+
+
+@pytest.mark.parametrize(
+    ("changed", "reason"),
+    [
+        (["package-lock.json"], "lockfile changed: package-lock.json"),
+        (["web/yarn.lock"], "lockfile changed: web/yarn.lock"),
+        ([".github/workflows/x.yml"], "CI config changed: .github/workflows/x.yml"),
+        ([".gitlab-ci.yml"], "CI config changed: .gitlab-ci.yml"),
+        ([".env.local"], "environment file changed: .env.local"),
+        (["app/.env"], "environment file changed: app/.env"),
+        (
+            [r".\.github\workflows\ci.yml"],
+            "CI config changed: .github/workflows/ci.yml",
+        ),
+    ],
+)
+def test_risky_changed_file_triggers_the_full_suite(changed, reason):
+    assert full_suite_trigger(RuleContext(changed_files=changed)) == reason
+
+
+@pytest.mark.parametrize(
+    ("ref", "reason"),
+    [
+        ("refs/tags/v1.0.0", "tag ref: refs/tags/v1.0.0"),
+        ("refs/heads/release/2.1", "release ref: refs/heads/release/2.1"),
+        ("release", "release ref: release"),
+    ],
+)
+def test_tag_or_release_ref_triggers_the_full_suite(ref, reason):
+    assert full_suite_trigger(RuleContext(ref=ref)) == reason
+
+
+@pytest.mark.parametrize(
+    "changed",
+    [["src/pay.py"], ["docs/.envrc"], ["environment.py"], ["package.json"], []],
+)
+def test_ordinary_change_does_not_trigger_the_full_suite(changed):
+    context = RuleContext(changed_files=changed, ref="refs/heads/feature/releases")
+    assert full_suite_trigger(context) is None
+
+
+def test_first_trigger_in_sorted_path_order_is_reported():
+    context = RuleContext(changed_files=["yarn.lock", ".env", "src/a.py"])
+    assert full_suite_trigger(context) == "environment file changed: .env"
+
+
+@pytest.mark.parametrize("ref", ["", "   ", 7])
+def test_bad_ref_is_rejected(ref):
+    with pytest.raises(ValueError, match="ref"):
+        full_suite_trigger(RuleContext(ref=ref))
+
+
+def test_full_suite_trigger_rejects_changed_files_as_a_string():
+    with pytest.raises(TypeError, match="list of paths"):
+        full_suite_trigger(RuleContext(changed_files="package-lock.json"))
