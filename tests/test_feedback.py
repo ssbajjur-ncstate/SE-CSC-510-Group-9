@@ -1,4 +1,6 @@
-from testbudget.feedback import nightly_failures
+import pytest
+
+from testbudget.feedback import link_strength, nightly_failures
 
 NIGHTLY = "n1"
 PAY = "tests/test_pay.py::test_charge"
@@ -40,3 +42,38 @@ def test_skipped_result_is_not_a_failure():
 
 def test_no_results_means_no_failures():
     assert nightly_failures(NIGHTLY, []) == []
+
+
+LINKS = {
+    PAY: [
+        {"file": "src/pay.py", "source": "import", "weight": 1.0},
+        {"file": "src/money.py", "source": "cofail", "weight": 0.5},
+    ],
+    UI: [{"file": "src/ui.py", "source": "import", "weight": 1.0}],
+}
+
+
+def test_link_strength_sums_links_to_changed_files():
+    changed = ["src/pay.py", "src/money.py", "src/pay.py", "README.md"]
+    assert link_strength(PAY, changed, LINKS) == 1.5
+
+
+def test_test_without_links_to_the_change_has_zero_strength():
+    assert link_strength(PAY, ["src/ui.py"], LINKS) == 0.0
+    assert link_strength(CART, ["src/pay.py"], LINKS) == 0.0
+
+
+@pytest.mark.parametrize(
+    ("entries", "message"),
+    [
+        ("src/pay.py", "must be a list"),
+        (["src/pay.py"], "object with a file"),
+        ([{"source": "import", "weight": 1.0}], "object with a file"),
+        ([{"file": "src/pay.py", "weight": -1}], "non-negative number"),
+        ([{"file": "src/pay.py", "weight": "high"}], "non-negative number"),
+        ([{"file": "src/pay.py"}], "non-negative number"),
+    ],
+)
+def test_malformed_links_are_rejected(entries, message):
+    with pytest.raises(ValueError, match=message):
+        link_strength(PAY, ["src/pay.py"], {PAY: entries})
