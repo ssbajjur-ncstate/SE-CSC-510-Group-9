@@ -1,5 +1,6 @@
 import pytest
 
+from testbudget.db import load_history_records
 from testbudget.riskmap import (
     change_risk,
     file_failure_weights,
@@ -269,3 +270,19 @@ def test_risk_level_boundaries_fall_in_the_lower_level(score, expected):
 def test_risk_level_rejects_unordered_thresholds():
     with pytest.raises(ValueError, match="ordered"):
         risk_level(1.0, (2.0, 1.0))
+
+
+def test_records_from_the_history_loader_feed_the_risk_map():
+    runs, results = load_history_records("fixtures/history_small")
+    prior = global_failure_prior(runs, results)
+    weights = file_failure_weights(runs, results)
+    thresholds = risk_thresholds(historical_risk_scores(runs, weights, prior))
+
+    assert prior == pytest.approx(0.4)
+    assert weights == pytest.approx(
+        {"docs/readme.md": 0.2, "src/pay.py": 0.7, "src/ui.py": 0.45}
+    )
+    risky = change_risk(["src/pay.py"], weights, prior)
+    safe = change_risk(["docs/readme.md"], weights, prior)
+    assert risk_level(risky, thresholds) == "high"
+    assert risk_level(safe, thresholds) == "low"
