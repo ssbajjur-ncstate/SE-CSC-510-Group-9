@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 - Added docs/eval-protocol.md with the M0 hypothesis, baselines and metrics.
-- Added docs/eval-protocol.md with the M0 hypothesis, baselines and metrics.
 - Add pull request template and issue templates (feature, bug, test-failure).
 - Added committed JSONL history files and SQLite history rebuilding.
+- Added LICENSE (MIT), CODE-OF-CONDUCT.md, INSTALL.md and EXTENSIONS.md.
 - Added migration from prototype SQLite history to committed JSONL history.
 
 ### Added
