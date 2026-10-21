@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Choose which existing tests run on a pull request, in what order, and for how long, from the repository's own CI history."
 readme = "README.md"
 requires-python = ">=3.10"
+dependencies = ["pyyaml>=6"]
 authors = [{ name = "CSC 510 Group 9" }]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -25,6 +26,7 @@ dev = [
     "hypothesis>=6.100",
     "ruff>=0.6",
     "mypy>=1.10",
+    "types-PyYAML",
 ]
 
 [project.scripts]
