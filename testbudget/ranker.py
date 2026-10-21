@@ -7,10 +7,38 @@ from typing import Any
 def load_links(path: str | Path) -> dict[str, list[str]]:
     """
     Load the changed-file-to-test mapping from JSON.
+
+    Accepts the shared links contract written by ``links --build``,
+    ``{test_id: [{file, source, weight}]}``, and inverts it. The legacy
+    ``{changed_file: [test_id]}`` shape is returned unchanged.
+
+    Args:
+        path: Path to the links JSON file.
+
+    Returns:
+        Mapping of source file to the sorted test IDs linked to it.
+
+    Raises:
+        ValueError: If the file is not a JSON object of lists.
     """
     with open(path, encoding="utf-8") as file:
-        links: dict[str, list[str]] = json.load(file)
-    return links
+        raw = json.load(file)
+    if not isinstance(raw, dict) or not all(
+        isinstance(entries, list) for entries in raw.values()
+    ):
+        raise ValueError(f"links file must map keys to lists: {path}")
+    if not any(
+        isinstance(entry, dict) for entries in raw.values() for entry in entries
+    ):
+        links: dict[str, list[str]] = raw
+        return links
+    inverted: dict[str, set[str]] = {}
+    for test_id, entries in raw.items():
+        for entry in entries:
+            if not isinstance(entry, dict) or "file" not in entry:
+                raise ValueError(f"{test_id}: link entry has no file: {path}")
+            inverted.setdefault(entry["file"], set()).add(test_id)
+    return {file: sorted(tests) for file, tests in sorted(inverted.items())}
 
 
 def get_linked_tests(

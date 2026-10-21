@@ -1,9 +1,12 @@
+import json
+
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
 from testbudget.ranker import (
     get_linked_tests,
+    load_links,
     rank_tests,
     rank_tests_coverage,
 )
@@ -260,3 +263,54 @@ def test_coverage_ranking_is_deterministic(tests, links, weights):
     second = rank_tests_coverage(list(reversed(stats)), changed[::-1], links, weights)
     assert first == second
     assert sorted(t["test_name"] for t in first) == sorted(tests)
+
+
+def test_load_links_inverts_the_shared_links_contract(tmp_path):
+    path = tmp_path / "links.json"
+    path.write_text(
+        json.dumps(
+            {
+                "tests/test_b.py::test_two": [
+                    {"file": "src/a.py", "source": "import", "weight": 1.0}
+                ],
+                "tests/test_a.py::test_one": [
+                    {"file": "src/a.py", "source": "import", "weight": 1.0},
+                    {"file": "src/b.py", "source": "cofail", "weight": 0.5},
+                ],
+                "tests/test_c.py::test_unlinked": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert load_links(path) == {
+        "src/a.py": ["tests/test_a.py::test_one", "tests/test_b.py::test_two"],
+        "src/b.py": ["tests/test_a.py::test_one"],
+    }
+
+
+def test_load_links_keeps_the_legacy_file_to_tests_shape(tmp_path):
+    path = tmp_path / "links.json"
+    legacy = {"src/a.py": ["tests/test_a.py::test_one"]}
+    path.write_text(json.dumps(legacy), encoding="utf-8")
+
+    assert load_links(path) == legacy
+
+
+def test_load_links_rejects_a_non_object_file(tmp_path):
+    path = tmp_path / "links.json"
+    path.write_text("[1, 2]", encoding="utf-8")
+
+    with pytest.raises(ValueError):
+        load_links(path)
+
+
+def test_load_links_rejects_a_contract_entry_without_file(tmp_path):
+    path = tmp_path / "links.json"
+    path.write_text(
+        json.dumps({"tests/test_a.py::test_one": [{"source": "import"}]}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError):
+        load_links(path)

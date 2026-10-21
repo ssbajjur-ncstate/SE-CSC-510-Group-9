@@ -555,3 +555,53 @@ def test_plan_rejects_unknown_ranker(tmp_path, capsys):
     assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
     with pytest.raises(SystemExit):
         main(_plan_args(db_path, "--ranker", "random"))
+
+
+def test_ingest_rejects_testcase_without_path(tmp_path, capsys):
+    xml_path = tmp_path / "bad.xml"
+    xml_path.write_text(
+        '<testsuite><testcase name="test_orphan" /></testsuite>', encoding="utf-8"
+    )
+
+    exit_code = main(["ingest", str(xml_path), "--db", str(tmp_path / "x.db")])
+
+    assert exit_code == 1
+    assert "Cannot ingest" in capsys.readouterr().out
+
+
+def test_plan_reads_links_written_by_links_build(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    links_path = tmp_path / "links.json"
+    links_path.write_text(
+        json.dumps(
+            {
+                "tests/test_checkout.py::test_checkout_invalid_card": [
+                    {"file": "src/checkout.py", "source": "import", "weight": 1.0}
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+    capsys.readouterr()
+
+    args = _plan_args(db_path, "--ranker", "baseline")
+    args[args.index("fixtures/test_links.json")] = str(links_path)
+
+    assert main(args) == 0
+    first = capsys.readouterr().out.split("RANKED TESTS")[1].splitlines()[1]
+    assert "tests/test_checkout.py::test_checkout_invalid_card" in first
+    assert "no changed file" not in first
+
+
+def test_plan_rejects_malformed_links_file(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    links_path = tmp_path / "links.json"
+    links_path.write_text("[1, 2]", encoding="utf-8")
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    args = _plan_args(db_path)
+    args[args.index("fixtures/test_links.json")] = str(links_path)
+
+    assert main(args) == 1
+    assert "links file must map keys to lists" in capsys.readouterr().out
