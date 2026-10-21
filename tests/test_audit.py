@@ -7,10 +7,10 @@ from testbudget.audit import (
     apply_reviewer_command,
     build_execution_policy,
 )
-
 from testbudget.reviewer import (
     parse_reviewer_command,
 )
+
 
 def make_plan():
     """
@@ -63,13 +63,9 @@ def test_normal_mode_executes_selected_only():
         ALL_TESTS,
     )
 
-    assert policy[
-        "mode"
-    ] == "normal"
+    assert policy["mode"] == "normal"
 
-    assert policy[
-        "execute_test_ids"
-    ] == [
+    assert policy["execute_test_ids"] == [
         "test-a",
         "test-b",
     ]
@@ -82,13 +78,9 @@ def test_audit_mode_executes_full_suite():
         audit_mode=True,
     )
 
-    assert policy[
-        "mode"
-    ] == "audit"
+    assert policy["mode"] == "audit"
 
-    assert policy[
-        "execute_test_ids"
-    ] == ALL_TESTS
+    assert policy["execute_test_ids"] == ALL_TESTS
 
 
 def test_audit_mode_preserves_planned_selection():
@@ -98,16 +90,12 @@ def test_audit_mode_preserves_planned_selection():
         audit_mode=True,
     )
 
-    assert policy[
-        "planned_selected_test_ids"
-    ] == [
+    assert policy["planned_selected_test_ids"] == [
         "test-a",
         "test-b",
     ]
 
-    assert policy[
-        "planned_skipped_test_ids"
-    ] == [
+    assert policy["planned_skipped_test_ids"] == [
         "test-c",
         "test-d",
     ]
@@ -120,13 +108,9 @@ def test_reviewer_full_executes_full_suite():
         force_full=True,
     )
 
-    assert policy[
-        "mode"
-    ] == "reviewer_full"
+    assert policy["mode"] == "reviewer_full"
 
-    assert policy[
-        "execute_test_ids"
-    ] == ALL_TESTS
+    assert policy["execute_test_ids"] == ALL_TESTS
 
 
 def test_reviewer_full_wins_when_audit_also_enabled():
@@ -137,21 +121,15 @@ def test_reviewer_full_wins_when_audit_also_enabled():
         force_full=True,
     )
 
-    assert policy[
-        "mode"
-    ] == "reviewer_full"
+    assert policy["mode"] == "reviewer_full"
 
-    assert policy[
-        "execute_test_ids"
-    ] == ALL_TESTS
+    assert policy["execute_test_ids"] == ALL_TESTS
 
 
 def test_plan_is_not_mutated():
     plan = make_plan()
 
-    original = copy.deepcopy(
-        plan
-    )
+    original = copy.deepcopy(plan)
 
     build_execution_policy(
         plan,
@@ -176,9 +154,7 @@ def test_full_suite_order_is_preserved():
         audit_mode=True,
     )
 
-    assert policy[
-        "execute_test_ids"
-    ] == all_tests
+    assert policy["execute_test_ids"] == all_tests
 
 
 def test_duplicate_full_suite_ids_are_removed():
@@ -194,17 +170,13 @@ def test_duplicate_full_suite_ids_are_removed():
         audit_mode=True,
     )
 
-    assert policy[
-        "execute_test_ids"
-    ] == ALL_TESTS
+    assert policy["execute_test_ids"] == ALL_TESTS
 
 
 def test_unknown_plan_test_is_rejected():
     plan = make_plan()
 
-    plan[
-        "selected"
-    ].append(
+    plan["selected"].append(
         {
             "test_id": "unknown-test",
             "reason": "bad fixture",
@@ -225,9 +197,7 @@ def test_unknown_plan_test_is_rejected():
 def test_missing_selected_list_is_rejected():
     plan = make_plan()
 
-    del plan[
-        "selected"
-    ]
+    del plan["selected"]
 
     with pytest.raises(
         AuditModeError,
@@ -242,9 +212,7 @@ def test_missing_selected_list_is_rejected():
 def test_missing_skipped_list_is_rejected():
     plan = make_plan()
 
-    del plan[
-        "skipped"
-    ]
+    del plan["skipped"]
 
     with pytest.raises(
         AuditModeError,
@@ -265,15 +233,9 @@ def test_apply_full_reviewer_command():
         },
     )
 
-    assert (
-        policy["mode"]
-        == "reviewer_full"
-    )
+    assert policy["mode"] == "reviewer_full"
 
-    assert (
-        policy["execute_test_ids"]
-        == ALL_TESTS
-    )
+    assert policy["execute_test_ids"] == ALL_TESTS
 
 
 def test_apply_no_reviewer_command_uses_normal_mode():
@@ -283,13 +245,9 @@ def test_apply_no_reviewer_command_uses_normal_mode():
         None,
     )
 
-    assert policy[
-        "mode"
-    ] == "normal"
+    assert policy["mode"] == "normal"
 
-    assert policy[
-        "execute_test_ids"
-    ] == [
+    assert policy["execute_test_ids"] == [
         "test-a",
         "test-b",
     ]
@@ -321,15 +279,9 @@ def test_writer_comment_forces_full_suite_end_to_end():
         command,
     )
 
-    assert (
-        policy["mode"]
-        == "reviewer_full"
-    )
+    assert policy["mode"] == "reviewer_full"
 
-    assert (
-        policy["execute_test_ids"]
-        == ALL_TESTS
-    )
+    assert policy["execute_test_ids"] == ALL_TESTS
 
 
 def test_audit_mode_without_comment_still_runs_full_suite():
@@ -347,22 +299,11 @@ def test_audit_mode_without_comment_still_runs_full_suite():
         audit_mode=True,
     )
 
-    assert (
-        policy["mode"]
-        == "audit"
-    )
+    assert policy["mode"] == "audit"
 
-    assert (
-        policy["execute_test_ids"]
-        == ALL_TESTS
-    )
+    assert policy["execute_test_ids"] == ALL_TESTS
 
-    assert (
-        policy[
-            "planned_selected_test_ids"
-        ]
-        == [
-            "test-a",
-            "test-b",
-        ]
-    )
+    assert policy["planned_selected_test_ids"] == [
+        "test-a",
+        "test-b",
+    ]

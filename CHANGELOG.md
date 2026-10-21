@@ -43,4 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Baseline orderings for the replay evaluation, as defined in docs/eval-protocol.md: recently failed first, most often failed first, most recently modified first, and import-only (testbudget/baselines.py).
 - Budget calibration (`testbudget/calibrate.py`): per-risk-level budget fractions from the replay CSV, with floor, ceiling and upward inheritance for sparse levels, written into a generated block of `testbudget.yml`.
 
+- Documented the M0 evaluation decision and outstanding data requirements.
+
+- Document main-branch protection and pull-request workflow for M1.
 - Documented the risk-aware test-budget calibration track in EXTENSIONS.md.

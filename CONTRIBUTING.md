@@ -1,3 +1,10 @@
+# Contributing
+
+- Create a separate branch for each change.
+- Open a pull request instead of pushing directly to main.
+- Run tests with python -m pytest -q.
+- Run lint checks with python -m ruff check ..
+- Request a teammate review before merging.
 # Contributing to TestBudget
 
 Thanks for helping. This guide covers the coding standards, the workflow every change goes through, and how to extend TestBudget without breaking it.
@@ -61,6 +68,7 @@ VALID_SOURCES = {"import", "route", "cofail", "pin", "sibling"}
 
 ```python
 """Sibling links: tests/test_foo.py is linked to foo.py."""
+
 from __future__ import annotations
 
 from pathlib import Path

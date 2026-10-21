@@ -34,19 +34,13 @@ def _validate_result(
     """
 
     if not isinstance(result, dict):
-        raise FlakeFilterError(
-            f"result {index} must be an object"
-        )
+        raise FlakeFilterError(f"result {index} must be an object")
 
-    missing = sorted(
-        REQUIRED_RESULT_FIELDS
-        - result.keys()
-    )
+    missing = sorted(REQUIRED_RESULT_FIELDS - result.keys())
 
     if missing:
         raise FlakeFilterError(
-            f"result {index} is missing required fields: "
-            + ", ".join(missing)
+            f"result {index} is missing required fields: " + ", ".join(missing)
         )
 
     sha = result["sha"]
@@ -55,26 +49,14 @@ def _validate_result(
     duration_s = result["duration_s"]
     attempt = result["attempt"]
 
-    if (
-        not isinstance(sha, str)
-        or not sha.strip()
-    ):
-        raise FlakeFilterError(
-            f"result {index} has an invalid sha"
-        )
+    if not isinstance(sha, str) or not sha.strip():
+        raise FlakeFilterError(f"result {index} has an invalid sha")
 
-    if (
-        not isinstance(test_id, str)
-        or not test_id.strip()
-    ):
-        raise FlakeFilterError(
-            f"result {index} has an invalid test_id"
-        )
+    if not isinstance(test_id, str) or not test_id.strip():
+        raise FlakeFilterError(f"result {index} has an invalid test_id")
 
     if status not in ALLOWED_STATUSES:
-        allowed = ", ".join(
-            sorted(ALLOWED_STATUSES)
-        )
+        allowed = ", ".join(sorted(ALLOWED_STATUSES))
 
         raise FlakeFilterError(
             f"result {index} has unsupported status "
@@ -89,18 +71,10 @@ def _validate_result(
         )
         or duration_s < 0
     ):
-        raise FlakeFilterError(
-            f"result {index} has an invalid duration_s"
-        )
+        raise FlakeFilterError(f"result {index} has an invalid duration_s")
 
-    if (
-        isinstance(attempt, bool)
-        or not isinstance(attempt, int)
-        or attempt < 1
-    ):
-        raise FlakeFilterError(
-            f"result {index} has an invalid attempt"
-        )
+    if isinstance(attempt, bool) or not isinstance(attempt, int) or attempt < 1:
+        raise FlakeFilterError(f"result {index} has an invalid attempt")
 
 
 def mark_flaky_failures(
@@ -140,9 +114,7 @@ def mark_flaky_failures(
 
     annotated = []
 
-    grouped = defaultdict(
-        list
-    )
+    grouped = defaultdict(list)
 
     for index, result in enumerate(
         results,
@@ -153,64 +125,40 @@ def mark_flaky_failures(
             index,
         )
 
-        copied = dict(
-            result
-        )
+        copied = dict(result)
 
         copied["flaky"] = False
         copied["flake_reason"] = None
 
-        annotated.append(
-            copied
-        )
+        annotated.append(copied)
 
         key = (
             copied["sha"],
             copied["test_id"],
         )
 
-        grouped[key].append(
-            copied
-        )
+        grouped[key].append(copied)
 
     for group_results in grouped.values():
-
-        passes = [
-            result
-            for result in group_results
-            if result["status"]
-            == "passed"
-        ]
+        passes = [result for result in group_results if result["status"] == "passed"]
 
         if not passes:
             continue
 
-        failures = [
-            result
-            for result in group_results
-            if result["status"]
-            == "failed"
-        ]
+        failures = [result for result in group_results if result["status"] == "failed"]
 
         for failure in failures:
-
             later_retry_pass = any(
-                passed["attempt"]
-                > failure["attempt"]
-                for passed in passes
+                passed["attempt"] > failure["attempt"] for passed in passes
             )
 
             failure["flaky"] = True
 
             if later_retry_pass:
-                failure[
-                    "flake_reason"
-                ] = "passed_on_retry"
+                failure["flake_reason"] = "passed_on_retry"
 
             else:
-                failure[
-                    "flake_reason"
-                ] = "passed_on_same_sha"
+                failure["flake_reason"] = "passed_on_same_sha"
 
     return annotated
 
@@ -225,18 +173,10 @@ def filter_non_flaky_failures(
     count real historical failures without treating flaky failures as misses.
     """
 
-    annotated = (
-        mark_flaky_failures(
-            results
-        )
-    )
+    annotated = mark_flaky_failures(results)
 
     return [
         result
         for result in annotated
-        if (
-            result["status"]
-            == "failed"
-            and not result["flaky"]
-        )
+        if (result["status"] == "failed" and not result["flaky"])
     ]

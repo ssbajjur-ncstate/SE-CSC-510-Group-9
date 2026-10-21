@@ -1,4 +1,5 @@
 """Co-failure links: files changed when a test failed become links to it."""
+
 from __future__ import annotations
 
 import json
