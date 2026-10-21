@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml)
 [![Docs](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/docs.yml)
-[![codecov](https://codecov.io/gh/ssbajjur-ncstate/SE-CSC-510-Group-9/branch/main/graph/badge.svg)](https://codecov.io/gh/ssbajjur-ncstate/SE-CSC-510-Group-9)
+[![coverage](https://raw.githubusercontent.com/ssbajjur-ncstate/SE-CSC-510-Group-9/badges/coverage.svg)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![mypy](https://img.shields.io/badge/types-mypy-blue.svg)](https://mypy-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)

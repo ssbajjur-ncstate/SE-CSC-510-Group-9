@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Replaced Codecov with a coverage badge that CI generates with genbadge and commits to the `badges` branch.
 - Coverage-weighted greedy ranker (`rank_tests_coverage`), the default for `testbudget plan`; `--ranker baseline` keeps the old ranker.
 - Added docs/self-assessment.md with rubric evidence links.
 - `testbudget migrate --db <sqlite>` moves prototype SQLite history into JSONL history.
