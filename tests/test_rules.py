@@ -2,7 +2,13 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from testbudget.rules import RuleContext, pin_first, pinned_tests
+from testbudget.rules import (
+    RuleContext,
+    changed_tests_next,
+    file_of_test,
+    pin_first,
+    pinned_tests,
+)
 
 
 def make_test(name, score=1.0, duration=1.0):
@@ -87,3 +93,47 @@ def test_pinned_test_is_always_first(ids, data):
     result = pin_first(ranked, RuleContext(config={"pins": pins}))
     assert result[0]["test_name"] in pins
     assert set(names(result[: len(pins)])) == set(pins)
+
+
+@pytest.mark.parametrize(
+    ("test_id", "expected"),
+    [
+        ("tests/test_a.py::test_one", "tests/test_a.py"),
+        ("tests/test_a.py::TestCase::test_one", "tests/test_a.py"),
+        ("e2e/cart.spec.ts › adds an item", "e2e/cart.spec.ts"),
+        (r"tests\test_a.py::test_one", "tests/test_a.py"),
+        ("tests/test_a.py", "tests/test_a.py"),
+    ],
+)
+def test_file_of_test_is_the_part_before_the_separator(test_id, expected):
+    assert file_of_test(test_id) == expected
+
+
+def test_test_whose_file_changed_moves_to_the_front():
+    context = RuleContext(changed_files=["./tests/test_b.py", "src/pay.py"])
+    result = changed_tests_next(RANKED, context)
+    assert names(result)[0] == "tests/test_b.py::test_two"
+    assert result[0]["rule"] == "changed test file"
+    assert names(result)[1:] == [
+        "tests/test_a.py::test_one",
+        "tests/test_c.py::test_three",
+    ]
+
+
+def test_playwright_spec_change_moves_its_tests():
+    ranked = [
+        make_test("e2e/home.spec.ts › loads"),
+        make_test("e2e/cart.spec.ts › adds"),
+    ]
+    context = RuleContext(changed_files=["e2e/cart.spec.ts"])
+    assert names(changed_tests_next(ranked, context))[0] == "e2e/cart.spec.ts › adds"
+
+
+def test_source_only_change_leaves_the_order_unchanged():
+    context = RuleContext(changed_files=["src/pay.py"])
+    assert names(changed_tests_next(RANKED, context)) == names(RANKED)
+
+
+def test_changed_files_given_as_a_string_is_rejected():
+    with pytest.raises(TypeError, match="list of paths"):
+        changed_tests_next(RANKED, RuleContext(changed_files="tests/test_b.py"))

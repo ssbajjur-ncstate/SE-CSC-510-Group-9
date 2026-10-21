@@ -99,3 +99,52 @@ def pin_first(
         ValueError: If ``pins`` is malformed.
     """
     return _promote(ranked, pinned_tests(context.config), "pinned")
+
+
+def _normalise_path(path: str) -> str:
+    """Return ``path`` with forward slashes and no leading ``./``."""
+    path = path.replace("\\", "/")
+    while path.startswith("./"):
+        path = path[2:]
+    return path
+
+
+def file_of_test(test_id: str) -> str:
+    """
+    Return the file part of a test ID.
+
+    Args:
+        test_id: ``path::name`` (pytest) or ``file › title`` (Playwright).
+    Returns:
+        The path before the first separator, normalised to forward slashes;
+        the whole ID if it has no separator.
+    """
+    cut = [test_id.find(sep) for sep in ("::", " › ") if sep in test_id]
+    return _normalise_path(test_id[: min(cut)] if cut else test_id)
+
+
+def changed_tests_next(
+    ranked: Iterable[Mapping[str, Any]], context: RuleContext
+) -> list[RankedTest]:
+    """
+    Move tests whose own test file is in the changed set to the front.
+
+    Args:
+        ranked: Output of ``ranker.rank_tests``.
+        context: Rule context; reads ``changed_files``.
+    Returns:
+        New list with matching tests first, in ranked order, tagged
+        ``rule="changed test file"``; the other tests follow in ranked order.
+    Raises:
+        TypeError: If ``changed_files`` is a single string instead of a list.
+    """
+    if isinstance(context.changed_files, str):
+        raise TypeError("changed_files must be a list of paths, not a string")
+    changed = {_normalise_path(path) for path in context.changed_files}
+    ranked = list(ranked)
+    matches = {
+        test["test_name"]
+        for test in ranked
+        if file_of_test(test["test_name"]) in changed
+    }
+    return _promote(ranked, matches, "changed test file")
