@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<testsuites>
+    <testsuite
+        name="pytest"
+        tests="3"
+        failures="0"
+        errors="1"
+        time="3.0">
+
+        <testcase
+            classname="tests.test_payment"
+            name="test_payment_success"
+            time="1.1" />
+
+        <testcase
+            classname="tests.test_payment.TestPayment"
+            name="test_payment_timeout"
+            time="1.9">
+
+            <error message="TimeoutError">
+                Payment service timed out
+            </error>
+
+        </testcase>
+
+        <testcase
+            classname="tests.test_profile"
+            name="test_profile"
+            time="0.0" />
+
+    </testsuite>
+</testsuites>
