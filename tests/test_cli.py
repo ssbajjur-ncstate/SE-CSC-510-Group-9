@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 
 import pytest
 
@@ -605,3 +607,13 @@ def test_plan_rejects_malformed_links_file(tmp_path, capsys):
 
     assert main(args) == 1
     assert "links file must map keys to lists" in capsys.readouterr().out
+
+
+def test_cli_imports_without_pytest_installed():
+    code = "import sys; sys.modules['pytest'] = None; import testbudget.cli"
+
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False
+    )
+
+    assert result.returncode == 0, result.stderr

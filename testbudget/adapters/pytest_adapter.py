@@ -2,8 +2,6 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-import pytest
-
 
 class PytestAdapterError(ValueError):
     """
@@ -385,6 +383,10 @@ def pytest_collection_modifyitems(
 
     if not plan_path:
         return
+
+    # pytest is a dev dependency and the CLI imports this module's ID
+    # helpers at runtime, so import it only when the hook actually runs.
+    import pytest
 
     try:
         selected_ids = load_selected_test_ids(plan_path)
