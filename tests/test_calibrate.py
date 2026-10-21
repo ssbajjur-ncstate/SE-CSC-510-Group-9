@@ -1,10 +1,14 @@
 import pytest
 
 from testbudget.calibrate import (
+    BLOCK_END,
+    BLOCK_START,
     CalibrationParams,
     calibrate,
     catch_rates,
+    format_calibration,
     read_replay_csv,
+    write_calibration,
 )
 
 FIXTURE = "fixtures/replay_synthetic.csv"
@@ -188,3 +192,106 @@ def test_calibration_of_an_empty_replay_fails():
 def test_bad_calibration_settings_are_rejected(settings, message):
     with pytest.raises(ValueError, match=message):
         CalibrationParams(**settings)
+
+
+PARAMS = CalibrationParams()
+BUDGETS = calibrate(read_replay_csv(FIXTURE), PARAMS)
+
+EXPECTED_BLOCK = f"""{BLOCK_START}
+calibrated_with:
+  target_catch_rate: 0.9
+  floor: 0.1
+  ceiling: 0.6
+  min_failing_runs: 10
+budgets:
+  low:
+    budget_fraction: 0.2
+    calibrated: true
+    catch_rate: 0.95
+    failing_runs: 20
+    note: "met target at 0.2 (catch rate 0.950)"
+  medium:
+    budget_fraction: 0.4
+    calibrated: true
+    catch_rate: 0.95
+    failing_runs: 20
+    note: "met target at 0.4 (catch rate 0.950)"
+  high:
+    budget_fraction: 0.5
+    calibrated: true
+    catch_rate: 0.95
+    failing_runs: 20
+    note: "met target at 0.5 (catch rate 0.950)"
+{BLOCK_END}
+"""
+
+
+def test_calibration_block_has_a_fixed_layout():
+    assert format_calibration(BUDGETS, PARAMS) == EXPECTED_BLOCK
+
+
+def test_uncalibrated_level_is_written_with_a_null_catch_rate():
+    budgets = calibrate(rows_for("high", [0.3] * 12), PARAMS)
+    block = format_calibration(budgets, PARAMS)
+    assert "    calibrated: false\n    catch_rate: null\n    failing_runs: 0\n" in block
+
+
+def test_missing_config_is_created_with_the_block(tmp_path):
+    path = tmp_path / "testbudget.yml"
+    write_calibration(path, BUDGETS, PARAMS)
+    assert path.read_text(encoding="utf-8") == EXPECTED_BLOCK
+
+
+def test_hand_written_config_is_kept_and_the_block_appended(tmp_path):
+    path = tmp_path / "testbudget.yml"
+    path.write_text("# team config\npins:\n  - tests/test_a.py::test_one", "utf-8")
+    write_calibration(path, BUDGETS, PARAMS)
+    assert path.read_text(encoding="utf-8") == (
+        "# team config\npins:\n  - tests/test_a.py::test_one\n\n" + EXPECTED_BLOCK
+    )
+
+
+def test_rerun_replaces_the_block_in_place(tmp_path):
+    path = tmp_path / "testbudget.yml"
+    path.write_text("pins: []\n", encoding="utf-8")
+    write_calibration(path, calibrate(rows_for("high", [0.3] * 12), PARAMS), PARAMS)
+    path.write_text(path.read_text(encoding="utf-8") + "rotation_limit: 10\n", "utf-8")
+    write_calibration(path, BUDGETS, PARAMS)
+    assert path.read_text(encoding="utf-8") == (
+        "pins: []\n\n" + EXPECTED_BLOCK + "rotation_limit: 10\n"
+    )
+
+
+def test_rerun_with_the_same_input_gives_identical_bytes(tmp_path):
+    path = tmp_path / "testbudget.yml"
+    write_calibration(path, BUDGETS, PARAMS)
+    first = path.read_bytes()
+    write_calibration(path, BUDGETS, PARAMS)
+    assert path.read_bytes() == first
+
+
+def test_written_config_parses_as_yaml(tmp_path):
+    yaml = pytest.importorskip("yaml")
+    path = tmp_path / "testbudget.yml"
+    path.write_text("pins:\n  - tests/test_a.py::test_one\n", encoding="utf-8")
+    write_calibration(path, BUDGETS, PARAMS)
+    config = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert config["pins"] == ["tests/test_a.py::test_one"]
+    assert config["budgets"]["medium"]["budget_fraction"] == 0.4
+    assert config["calibrated_with"]["min_failing_runs"] == 10
+
+
+@pytest.mark.parametrize("text", [BLOCK_START + "\n", BLOCK_END + "\n"])
+def test_config_with_a_broken_block_is_rejected(tmp_path, text):
+    path = tmp_path / "testbudget.yml"
+    path.write_text(text, encoding="utf-8")
+    with pytest.raises(ValueError, match="one generated calibration block"):
+        write_calibration(path, BUDGETS, PARAMS)
+
+
+def test_hand_written_budgets_key_is_rejected(tmp_path):
+    path = tmp_path / "testbudget.yml"
+    path.write_text("budgets:\n  low: 0.3\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="'budgets' is set outside"):
+        write_calibration(path, BUDGETS, PARAMS)
+    assert path.read_text(encoding="utf-8") == "budgets:\n  low: 0.3\n"

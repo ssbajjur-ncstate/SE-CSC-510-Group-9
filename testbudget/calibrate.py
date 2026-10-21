@@ -8,8 +8,10 @@ selected at that fraction of full-suite time ran a failing test.
 from __future__ import annotations
 
 import csv
+import json
 import math
-from collections.abc import Iterable
+import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TypedDict
@@ -244,3 +246,97 @@ def calibrate(
             }
         higher = level
     return {level: budgets[level] for level in RISK_LEVELS}
+
+
+BLOCK_START = "# >>> testbudget calibrate (generated; edit the replay, not this block)"
+BLOCK_END = "# <<< testbudget calibrate"
+_OWNED_KEYS = re.compile(r"^(budgets|calibrated_with)\s*:", re.MULTILINE)
+
+
+def _yaml_scalar(value: object) -> str:
+    """Render a scalar as YAML; strings are double-quoted JSON, valid YAML."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float):
+        return repr(round(value, 6))
+    if isinstance(value, int):
+        return str(value)
+    return json.dumps(str(value))
+
+
+def format_calibration(
+    budgets: Mapping[str, LevelBudget], params: CalibrationParams
+) -> str:
+    """
+    Render calibrated budgets as the generated block of ``testbudget.yml``.
+
+    Args:
+        budgets: Output of ``calibrate``.
+        params: Settings the budgets were calibrated with.
+    Returns:
+        YAML text between ``BLOCK_START`` and ``BLOCK_END``, ending in a
+        newline, with keys in a fixed order so reruns give identical text.
+    """
+    lines = [BLOCK_START, "calibrated_with:"]
+    lines += [
+        f"  {key}: {_yaml_scalar(getattr(params, key))}"
+        for key in ("target_catch_rate", "floor", "ceiling", "min_failing_runs")
+    ]
+    lines.append("budgets:")
+    for level in RISK_LEVELS:
+        lines.append(f"  {level}:")
+        budget = budgets[level]
+        for key in ("budget_fraction", "calibrated", "catch_rate", "failing_runs"):
+            lines.append(f"    {key}: {_yaml_scalar(budget[key])}")
+        lines.append(f"    note: {_yaml_scalar(budget['note'])}")
+    lines.append(BLOCK_END)
+    return "\n".join(lines) + "\n"
+
+
+def write_calibration(
+    path: str | Path,
+    budgets: Mapping[str, LevelBudget],
+    params: CalibrationParams,
+) -> None:
+    """
+    Write calibrated budgets into ``testbudget.yml``, keeping the rest of it.
+
+    The budgets live in a generated block. A rerun replaces that block in
+    place; a file without one gets it appended; a missing file is created.
+    Only the standard library is used, so the file is never re-serialised and
+    hand-written keys and comments are kept byte for byte.
+    Args:
+        path: The config file, normally ``testbudget.yml``.
+        budgets: Output of ``calibrate``.
+        params: Settings the budgets were calibrated with.
+    Raises:
+        ValueError: If the file has only one of the block markers, or defines
+            ``budgets`` or ``calibrated_with`` outside the block.
+    """
+    path = Path(path)
+    block = format_calibration(budgets, params)
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    starts, ends = text.count(BLOCK_START), text.count(BLOCK_END)
+    if (starts, ends) not in ((0, 0), (1, 1)):
+        raise ValueError(
+            f"{path}: expected one generated calibration block, found "
+            f"{starts} start and {ends} end markers"
+        )
+    if starts:
+        head, rest = text.split(BLOCK_START, 1)
+        tail = rest.split(BLOCK_END, 1)[1].removeprefix("\n")
+    else:
+        head, tail = text, ""
+        if head and not head.endswith("\n"):
+            head += "\n"
+        if head.strip():
+            head += "\n"
+    clash = _OWNED_KEYS.search(head + tail)
+    if clash:
+        raise ValueError(
+            f"{path}: '{clash.group(1)}' is set outside the generated block; "
+            "remove it so calibration owns it"
+        )
+    path.write_text(head + block + tail, encoding="utf-8")
