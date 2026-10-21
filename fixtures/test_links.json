@@ -1,17 +1,17 @@
 {
   "src/checkout.py": [
-    "test_checkout_success",
-    "test_checkout_invalid_card",
-    "test_payment_timeout"
+    "tests/test_checkout.py::test_checkout_success",
+    "tests/test_checkout.py::test_checkout_invalid_card",
+    "tests/test_payment.py::test_payment_timeout"
   ],
   "src/payment.py": [
-    "test_checkout_invalid_card",
-    "test_payment_timeout"
+    "tests/test_checkout.py::test_checkout_invalid_card",
+    "tests/test_payment.py::test_payment_timeout"
   ],
   "src/auth.py": [
-    "test_login_success"
+    "tests/test_login.py::test_login_success"
   ],
   "src/cart.py": [
-    "test_add_to_cart"
+    "tests/test_cart.py::test_add_to_cart"
   ]
 }

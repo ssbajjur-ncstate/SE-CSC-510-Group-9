@@ -35,6 +35,14 @@ Installed with `pip install -e ".[dev]"`.
 Hypothesis is the only copyleft (file-level, MPL-2.0) licence in the list. It is
 used only in the test suite and is not distributed with the package.
 
+## CI only
+
+Installed by `.github/workflows/ci.yml`, not by `pip install`.
+
+| Library | Version | Purpose | Licence |
+|---|---|---|---|
+| [genbadge](https://pypi.org/project/genbadge/) | latest, with the `coverage` extra | Turns `coverage.xml` into the README coverage badge on pushes to `main` | [BSD-3-Clause](https://pypi.org/project/genbadge/) |
+
 ## Adding a dependency
 
 Add a row to the right table in the same PR that adds the dependency to

@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Fixed: `testbudget ingest` stores pytest results as `path::name` IDs and `plan` reads the `links --build` format, so changed files now link to tests (#128).
+- Replaced Codecov with a coverage badge that CI generates with genbadge and commits to the `badges` branch.
+- Coverage-weighted greedy ranker (`rank_tests_coverage`), the default for `testbudget plan`; `--ranker baseline` keeps the old ranker.
+- Added docs/self-assessment.md with rubric evidence links.
+- `testbudget migrate --db <sqlite>` moves prototype SQLite history into JSONL history.
+- `testbudget plan --audit`, `--reviewer-comment` and `--policy-output` expose audit mode and `/testbudget full` overrides.
+- Rewrote README (what, why, how, quickstart), added badges, Codecov upload, CITATION.cff and .zenodo.json.
+- `testbudget calibrate --replay <csv> [--output testbudget.yml]` writes calibrated per-risk-level budgets.
+- `testbudget links --build [--output links.json]` builds the link map from imports, routes, co-failures and pins.
+- `testbudget plan` applies hard rules before the budget cut and writes plan.json with `--output` and `--config`.
 - Fixed duplicate `external-caller` job that broke the testbudget workflow on main.
 - Added docs/eval-protocol.md with the M0 hypothesis, baselines and metrics.
 - Add pull request template and issue templates (feature, bug, test-failure).
