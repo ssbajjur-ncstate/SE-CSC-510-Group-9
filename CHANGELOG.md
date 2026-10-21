@@ -14,3 +14,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `pyproject.toml` with a `testbudget` console script and a `dev` extra; install with `pip install -e ".[dev]"`.
 - `THIRD_PARTY_LIBRARIES.md` listing build and dev dependencies with their licences.
+- Hard rules (`testbudget/rules.py`): pinned tests first, changed test files next, recent failures next, a rotation limit from skip debt, and a full-suite trigger for lockfile, CI config, `.env`, tag and release changes.

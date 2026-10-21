@@ -5,6 +5,7 @@ from hypothesis import strategies as st
 from testbudget.rules import (
     RuleContext,
     apply_rotation_limit,
+    apply_rules,
     changed_tests_next,
     compute_skip_debt,
     file_of_test,
@@ -348,3 +349,108 @@ def test_bad_ref_is_rejected(ref):
 def test_full_suite_trigger_rejects_changed_files_as_a_string():
     with pytest.raises(TypeError, match="list of paths"):
         full_suite_trigger(RuleContext(changed_files="package-lock.json"))
+
+
+def full_context(**overrides):
+    runs = [make_run(f"r{day}", day) for day in range(1, 4)]
+    results = [
+        make_result("r1", "tests/test_a.py::test_one"),
+        make_result("r3", "tests/test_b.py::test_two", "failed"),
+        make_result("r3", "tests/test_d.py::test_four"),
+    ]
+    fields = {
+        "config": {"pins": ["tests/test_c.py::test_three"], "rotation_limit": 2},
+        "changed_files": ["tests/test_d.py"],
+        "runs": runs,
+        "results": results,
+    }
+    fields.update(overrides)
+    return RuleContext(**fields)
+
+
+PIPELINE_RANKED = RANKED + [make_test("tests/test_d.py::test_four", score=0.5)]
+
+
+def test_rules_apply_in_precedence_order():
+    outcome = apply_rules(PIPELINE_RANKED, full_context())
+    assert names(outcome["tests"]) == [
+        "tests/test_c.py::test_three",
+        "tests/test_d.py::test_four",
+        "tests/test_b.py::test_two",
+        "tests/test_a.py::test_one",
+    ]
+    assert [test.get("rule") for test in outcome["tests"]] == [
+        "pinned",
+        "changed test file",
+        "recent failure",
+        None,
+    ]
+    assert outcome["run_all"] is False
+    assert outcome["trigger"] is None
+
+
+def test_rotation_limit_marks_tests_inside_the_pipeline():
+    tests = {
+        t["test_name"]: t for t in apply_rules(PIPELINE_RANKED, full_context())["tests"]
+    }
+    assert tests["tests/test_a.py::test_one"]["forced"] is True
+    assert tests["tests/test_a.py::test_one"]["skip_debt"] == 2
+    assert tests["tests/test_b.py::test_two"]["forced"] is False
+
+
+def test_test_matching_several_rules_takes_the_highest_tag():
+    context = full_context(changed_files=["tests/test_c.py"])
+    first = apply_rules(PIPELINE_RANKED, context)["tests"][0]
+    assert first["test_name"] == "tests/test_c.py::test_three"
+    assert first["rule"] == "pinned"
+
+
+def test_full_suite_trigger_forces_every_test():
+    context = full_context(changed_files=["poetry.lock"])
+    outcome = apply_rules(PIPELINE_RANKED, context)
+    assert outcome["run_all"] is True
+    assert outcome["trigger"] == "lockfile changed: poetry.lock"
+    assert all(test["forced"] for test in outcome["tests"])
+
+
+def test_apply_rules_on_empty_inputs_returns_nothing_to_run():
+    outcome = apply_rules([], RuleContext())
+    assert outcome == {"tests": [], "run_all": False, "trigger": None}
+
+
+def test_apply_rules_does_not_mutate_its_input():
+    ranked = [dict(test) for test in PIPELINE_RANKED]
+    apply_rules(ranked, full_context())
+    assert ranked == PIPELINE_RANKED
+
+
+def test_apply_rules_rejects_a_malformed_config():
+    with pytest.raises(ValueError, match="rotation_limit"):
+        apply_rules(PIPELINE_RANKED, full_context(config={"rotation_limit": "x"}))
+
+
+@given(ids=test_ids, data=st.data())
+def test_pinned_test_is_always_first_after_every_rule(ids, data):
+    pins = data.draw(st.lists(st.sampled_from(ids), min_size=1, unique=True))
+    changed = data.draw(st.lists(st.sampled_from(ids), unique=True))
+    failed = data.draw(st.lists(st.sampled_from(ids), unique=True))
+    runs = [make_run("r1", 1)]
+    results = [make_result("r1", test_id, "failed") for test_id in failed]
+    context = RuleContext(
+        config={"pins": pins},
+        changed_files=[test_id.split("::")[0] for test_id in changed],
+        runs=runs,
+        results=results,
+    )
+    ranked = [make_test(test_id) for test_id in ids]
+    outcome = apply_rules(ranked, context)
+    assert outcome["tests"][0]["test_name"] in pins
+    assert outcome["tests"][0]["rule"] == "pinned"
+
+
+@given(ids=test_ids, data=st.data())
+def test_identical_inputs_give_identical_rule_output(ids, data):
+    pins = data.draw(st.lists(st.sampled_from(ids), unique=True))
+    ranked = [make_test(test_id) for test_id in ids]
+    context = RuleContext(config={"pins": pins})
+    assert apply_rules(ranked, context) == apply_rules(ranked, context)

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypedDict
 
 RankedTest = dict[str, Any]
 Record = Mapping[str, Any]
@@ -356,3 +356,44 @@ def full_suite_trigger(context: RuleContext) -> str | None:
     if branch == "release" or branch.startswith("release/"):
         return f"release ref: {ref}"
     return None
+
+
+class RulesOutcome(TypedDict):
+    """Result of ``apply_rules``."""
+
+    tests: list[RankedTest]
+    run_all: bool
+    trigger: str | None
+
+
+def apply_rules(
+    ranked: Iterable[Mapping[str, Any]], context: RuleContext
+) -> RulesOutcome:
+    """
+    Apply every hard rule to a ranked list.
+
+    The final order is pinned tests, then tests whose own file changed, then
+    tests that failed in the last K runs, then the rest, each group in ranked
+    order. A test that matches several rules is tagged with the first. Every
+    test carries ``skip_debt`` and ``forced``; when the full-suite trigger
+    fires, every test is forced.
+    Args:
+        ranked: Output of ``ranker.rank_tests``.
+        context: Rule context shared by all rules.
+    Returns:
+        ``{"tests", "run_all", "trigger"}``; ``trigger`` is the reason from
+        ``full_suite_trigger`` or None.
+    Raises:
+        ValueError: If the config, history window or ref is malformed.
+        TypeError: If ``changed_files`` is a single string.
+    """
+    trigger = full_suite_trigger(context)
+    tests = apply_rotation_limit(ranked, context)
+    # Promote from lowest to highest precedence: each later rule moves its
+    # tests in front of the earlier ones and overwrites their rule tag.
+    tests = recent_failures_next(tests, context)
+    tests = changed_tests_next(tests, context)
+    tests = pin_first(tests, context)
+    if trigger is not None:
+        tests = [{**test, "forced": True} for test in tests]
+    return {"tests": tests, "run_all": trigger is not None, "trigger": trigger}
