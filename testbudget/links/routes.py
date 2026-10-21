@@ -56,7 +56,10 @@ def build_route_table(root: Path) -> list[tuple[re.Pattern, str]]:
 
 
 def extract_goto_paths(source: str) -> tuple[list[str], int]:
-    """Return (literal paths, total goto calls). Template strings count as unresolved."""
+    """Return (literal paths, total goto calls).
+
+    Template strings count as unresolved.
+    """
     paths = [m.group("path") for m in GOTO_LITERAL.finditer(source)]
     return paths, len(GOTO_ANY.findall(source))
 
@@ -75,7 +78,10 @@ def resolve_route(url_path: str, table: list[tuple[re.Pattern, str]]) -> str | N
 def build_route_links(
     root: Path, spec_dir: str = "e2e"
 ) -> tuple[dict[str, list[dict]], dict]:
-    """Return (links, stats). Every test in a spec links to every route that spec visits."""
+    """Return (links, stats).
+
+    Every test in a spec links to every route that spec visits.
+    """
     table = build_route_table(root)
     links: dict[str, list[dict]] = {}
     total = resolved = 0
