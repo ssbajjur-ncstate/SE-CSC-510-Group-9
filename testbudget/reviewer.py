@@ -35,10 +35,7 @@ def has_write_permission(
     ):
         return False
 
-    return (
-        permission.strip().lower()
-        in WRITE_PERMISSIONS
-    )
+    return permission.strip().lower() in WRITE_PERMISSIONS
 
 
 def known_test_ids_from_results(
@@ -69,13 +66,9 @@ def known_test_ids_from_results(
             result,
             dict,
         ):
-            raise ReviewerCommandError(
-                f"history result {index} must be an object"
-            )
+            raise ReviewerCommandError(f"history result {index} must be an object")
 
-        test_id = result.get(
-            "test_id"
-        )
+        test_id = result.get("test_id")
 
         if (
             not isinstance(
@@ -84,20 +77,14 @@ def known_test_ids_from_results(
             )
             or not test_id.strip()
         ):
-            raise ReviewerCommandError(
-                f"history result {index} has no valid test_id"
-            )
+            raise ReviewerCommandError(f"history result {index} has no valid test_id")
 
         test_id = test_id.strip()
 
         if test_id not in seen:
-            known.append(
-                test_id
-            )
+            known.append(test_id)
 
-            seen.add(
-                test_id
-            )
+            seen.add(test_id)
 
     return known
 
@@ -109,13 +96,9 @@ def load_known_test_ids(
     Load all known test IDs from TestBudget's canonical JSONL history.
     """
 
-    _, results = load_history_records(
-        history_dir
-    )
+    _, results = load_history_records(history_dir)
 
-    return known_test_ids_from_results(
-        results
-    )
+    return known_test_ids_from_results(results)
 
 
 def validate_test_ids(
@@ -142,9 +125,7 @@ def validate_test_ids(
             If a requested test ID is malformed or unknown.
     """
 
-    known = set(
-        known_test_ids
-    )
+    known = set(known_test_ids)
 
     validated = []
     seen = set()
@@ -160,25 +141,17 @@ def validate_test_ids(
             )
             or not test_id.strip()
         ):
-            raise ReviewerCommandError(
-                f"requested test ID {index} is invalid"
-            )
+            raise ReviewerCommandError(f"requested test ID {index} is invalid")
 
         test_id = test_id.strip()
 
         if test_id not in known:
-            raise ReviewerCommandError(
-                f"unknown test ID: {test_id}"
-            )
+            raise ReviewerCommandError(f"unknown test ID: {test_id}")
 
         if test_id not in seen:
-            validated.append(
-                test_id
-            )
+            validated.append(test_id)
 
-            seen.add(
-                test_id
-            )
+            seen.add(test_id)
 
     return validated
 
@@ -226,20 +199,14 @@ def parse_reviewer_command(
     ):
         return None
 
-    lines = [
-        line.strip()
-        for line in comment_body.splitlines()
-        if line.strip()
-    ]
+    lines = [line.strip() for line in comment_body.splitlines() if line.strip()]
 
     if not lines:
         return None
 
     command_line = lines[0]
 
-    if not command_line.startswith(
-        "/testbudget"
-    ):
+    if not command_line.startswith("/testbudget"):
         return None
 
     parts = command_line.split()
@@ -249,16 +216,11 @@ def parse_reviewer_command(
         "full",
     ]:
         raise ReviewerCommandError(
-            "unsupported TestBudget command; "
-            "expected `/testbudget full`"
+            "unsupported TestBudget command; expected `/testbudget full`"
         )
 
-    if not has_write_permission(
-        actor_permission
-    ):
-        raise ReviewerCommandError(
-            "reviewer does not have write permission"
-        )
+    if not has_write_permission(actor_permission):
+        raise ReviewerCommandError("reviewer does not have write permission")
 
     return {
         "action": "full",

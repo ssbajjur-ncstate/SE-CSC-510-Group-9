@@ -84,9 +84,7 @@ from testbudget.reviewer import (
     load_known_test_ids,
 )
 
-known = load_known_test_ids(
-    "history"
-)
+known = load_known_test_ids("history")
 ```
 
 Validate requested IDs with:

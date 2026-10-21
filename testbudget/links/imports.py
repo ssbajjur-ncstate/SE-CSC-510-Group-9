@@ -1,4 +1,5 @@
 """Static import links: which source files does a test import?"""
+
 from __future__ import annotations
 
 import ast
@@ -46,8 +47,11 @@ def test_functions(source: str) -> list[str]:
         tree = ast.parse(source)
     except SyntaxError:
         return []
-    return [n.name for n in ast.walk(tree)
-            if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")]
+    return [
+        n.name
+        for n in ast.walk(tree)
+        if isinstance(n, ast.FunctionDef) and n.name.startswith("test_")
+    ]
 
 
 def build_import_links(root: Path, test_dir: str = "tests") -> dict[str, list[dict]]:

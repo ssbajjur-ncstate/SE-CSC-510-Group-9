@@ -9,7 +9,11 @@ from testbudget.links.routes import (
 
 
 def make_app(root: Path):
-    for rel in ["app/users/[id]/page.tsx", "app/(marketing)/about/page.tsx", "pages/index.tsx"]:
+    for rel in [
+        "app/users/[id]/page.tsx",
+        "app/(marketing)/about/page.tsx",
+        "pages/index.tsx",
+    ]:
         p = root / rel
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text("export default function P(){}\n")
@@ -23,7 +27,10 @@ def test_dynamic_segment_resolves(tmp_path):
 
 def test_route_group_ignored(tmp_path):
     make_app(tmp_path)
-    assert resolve_route("/about", build_route_table(tmp_path)) == "app/(marketing)/about/page.tsx"
+    assert (
+        resolve_route("/about", build_route_table(tmp_path))
+        == "app/(marketing)/about/page.tsx"
+    )
 
 
 def test_pages_router_index(tmp_path):
@@ -61,5 +68,8 @@ def test_build_route_links_end_to_end(tmp_path):
         "test('visits about', async ({page}) => { await page.goto('/about'); });\n"
     )
     links, stats = build_route_links(tmp_path)
-    assert links["e2e/a.spec.ts › visits about"][0]["file"] == "app/(marketing)/about/page.tsx"
+    assert (
+        links["e2e/a.spec.ts › visits about"][0]["file"]
+        == "app/(marketing)/about/page.tsx"
+    )
     assert stats["fraction"] == 1.0

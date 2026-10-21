@@ -1,4 +1,5 @@
 """Pinned links from testbudget.yml."""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -24,13 +24,8 @@ def normalize_playwright_file(test_file):
         tests/login.spec.ts
     """
 
-    if (
-        not isinstance(test_file, str)
-        or not test_file.strip()
-    ):
-        raise PlaywrightAdapterError(
-            "Playwright testcase has no usable file"
-        )
+    if not isinstance(test_file, str) or not test_file.strip():
+        raise PlaywrightAdapterError("Playwright testcase has no usable file")
 
     normalized = test_file.strip().replace(
         "\\",
@@ -47,9 +42,7 @@ def normalize_playwright_file(test_file):
     )
 
     if not normalized:
-        raise PlaywrightAdapterError(
-            "Playwright testcase has no usable file"
-        )
+        raise PlaywrightAdapterError("Playwright testcase has no usable file")
 
     return normalized
 
@@ -66,22 +59,12 @@ def normalize_playwright_test_id(
         file › title
     """
 
-    test_file = normalize_playwright_file(
-        test_file
-    )
+    test_file = normalize_playwright_file(test_file)
 
-    if (
-        not isinstance(title, str)
-        or not title.strip()
-    ):
-        raise PlaywrightAdapterError(
-            "Playwright testcase has no title"
-        )
+    if not isinstance(title, str) or not title.strip():
+        raise PlaywrightAdapterError("Playwright testcase has no title")
 
-    return (
-        f"{test_file} › "
-        f"{title.strip()}"
-    )
+    return f"{test_file} › {title.strip()}"
 
 
 def _element_name(element):
@@ -89,9 +72,7 @@ def _element_name(element):
     Return an XML element's local name without a namespace.
     """
 
-    return element.tag.split(
-        "}"
-    )[-1]
+    return element.tag.split("}")[-1]
 
 
 def _children_named(
@@ -102,11 +83,7 @@ def _children_named(
     Return direct child elements whose local names match `names`.
     """
 
-    return [
-        child
-        for child in testcase
-        if _element_name(child) in names
-    ]
+    return [child for child in testcase if _element_name(child) in names]
 
 
 def _duration_from_value(
@@ -126,9 +103,7 @@ def _duration_from_value(
         return 0.0
 
     try:
-        duration = float(
-            raw_value
-        )
+        duration = float(raw_value)
 
     except (
         TypeError,
@@ -139,9 +114,7 @@ def _duration_from_value(
         ) from error
 
     if duration < 0:
-        raise PlaywrightAdapterError(
-            f"{context}: JUnit duration cannot be negative"
-        )
+        raise PlaywrightAdapterError(f"{context}: JUnit duration cannot be negative")
 
     return duration
 
@@ -163,13 +136,9 @@ def _parse_playwright_testcase(
     final attempt number.
     """
 
-    test_file = testcase.attrib.get(
-        "classname"
-    )
+    test_file = testcase.attrib.get("classname")
 
-    title = testcase.attrib.get(
-        "name"
-    )
+    title = testcase.attrib.get("name")
 
     test_id = normalize_playwright_test_id(
         test_file,
@@ -205,13 +174,9 @@ def _parse_playwright_testcase(
         },
     )
 
-    if (
-        flaky_failures
-        and rerun_failures
-    ):
+    if flaky_failures and rerun_failures:
         raise PlaywrightAdapterError(
-            f"{test_id}: testcase contains both "
-            "flaky and rerun retry metadata"
+            f"{test_id}: testcase contains both flaky and rerun retry metadata"
         )
 
     # A skipped Playwright test has no executed retry history.
@@ -221,9 +186,7 @@ def _parse_playwright_testcase(
             "status": "skipped",
             "duration_s": (
                 _duration_from_value(
-                    testcase.attrib.get(
-                        "time"
-                    ),
+                    testcase.attrib.get("time"),
                     test_id,
                 )
             ),
@@ -241,16 +204,11 @@ def _parse_playwright_testcase(
             "status": "passed",
             "duration_s": (
                 _duration_from_value(
-                    testcase.attrib.get(
-                        "time"
-                    ),
+                    testcase.attrib.get("time"),
                     test_id,
                 )
             ),
-            "attempt": (
-                len(flaky_failures)
-                + 1
-            ),
+            "attempt": (len(flaky_failures) + 1),
         }
 
     # A still-failing retried test has rerunFailure/rerunError children.
@@ -258,41 +216,28 @@ def _parse_playwright_testcase(
     # Their `time` values represent subsequent retry attempts. Therefore
     # the final retry child gives us the final attempt's duration.
     if rerun_failures:
-        final_retry = (
-            rerun_failures[-1]
-        )
+        final_retry = rerun_failures[-1]
 
         return {
             "test_id": test_id,
             "status": "failed",
             "duration_s": (
                 _duration_from_value(
-                    final_retry.attrib.get(
-                        "time"
-                    ),
+                    final_retry.attrib.get("time"),
                     test_id,
                 )
             ),
-            "attempt": (
-                len(rerun_failures)
-                + 1
-            ),
+            "attempt": (len(rerun_failures) + 1),
         }
 
-    status = (
-        "failed"
-        if normal_failures
-        else "passed"
-    )
+    status = "failed" if normal_failures else "passed"
 
     return {
         "test_id": test_id,
         "status": status,
         "duration_s": (
             _duration_from_value(
-                testcase.attrib.get(
-                    "time"
-                ),
+                testcase.attrib.get("time"),
                 test_id,
             )
         ),
@@ -328,9 +273,7 @@ def parse_playwright_junit(
             If the report is missing, malformed, or contains invalid data.
     """
 
-    xml_path = Path(
-        xml_path
-    )
+    xml_path = Path(xml_path)
 
     if not xml_path.exists():
         raise PlaywrightAdapterError(
@@ -338,9 +281,7 @@ def parse_playwright_junit(
         )
 
     try:
-        tree = ET.parse(
-            xml_path
-        )
+        tree = ET.parse(xml_path)
 
     except ET.ParseError as error:
         raise PlaywrightAdapterError(
@@ -351,25 +292,15 @@ def parse_playwright_junit(
 
     ordered_ids = []
     records = {}
-    occurrence_counts = {}
+    occurrence_counts: dict[str, int] = {}
 
-    for testcase in root.iter(
-        "testcase"
-    ):
-        record = (
-            _parse_playwright_testcase(
-                testcase
-            )
-        )
+    for testcase in root.iter("testcase"):
+        record = _parse_playwright_testcase(testcase)
 
-        test_id = record[
-            "test_id"
-        ]
+        test_id = record["test_id"]
 
         if test_id not in records:
-            ordered_ids.append(
-                test_id
-            )
+            ordered_ids.append(test_id)
 
         occurrence_count = (
             occurrence_counts.get(
@@ -379,9 +310,7 @@ def parse_playwright_junit(
             + 1
         )
 
-        occurrence_counts[
-            test_id
-        ] = occurrence_count
+        occurrence_counts[test_id] = occurrence_count
 
         # Internal retry information can already report attempt > 1.
         # If the JUnit producer instead repeated entire testcase entries,
@@ -391,14 +320,9 @@ def parse_playwright_junit(
             occurrence_count,
         )
 
-        records[
-            test_id
-        ] = record
+        records[test_id] = record
 
-    return [
-        records[test_id]
-        for test_id in ordered_ids
-    ]
+    return [records[test_id] for test_id in ordered_ids]
 
 
 def split_playwright_test_id(
@@ -408,31 +332,23 @@ def split_playwright_test_id(
     Split `file › title` into its file and title components.
     """
 
-    if (
-        not isinstance(test_id, str)
-        or " › " not in test_id
-    ):
-        raise PlaywrightAdapterError(
-            f"invalid Playwright test ID: {test_id}"
-        )
+    if not isinstance(test_id, str) or " › " not in test_id:
+        raise PlaywrightAdapterError(f"invalid Playwright test ID: {test_id}")
 
     test_file, title = test_id.split(
         " › ",
         1,
     )
 
-    test_file = normalize_playwright_file(
-        test_file
-    )
+    test_file = normalize_playwright_file(test_file)
 
     title = title.strip()
 
     if not title:
-        raise PlaywrightAdapterError(
-            f"invalid Playwright test ID: {test_id}"
-        )
+        raise PlaywrightAdapterError(f"invalid Playwright test ID: {test_id}")
 
     return test_file, title
+
 
 def load_playwright_test_ids(
     plan_path,
@@ -444,21 +360,13 @@ def load_playwright_test_ids(
     Only Playwright IDs are returned by this adapter.
     """
 
-    plan_path = Path(
-        plan_path
-    )
+    plan_path = Path(plan_path)
 
     if not plan_path.exists():
-        raise PlaywrightAdapterError(
-            f"TestBudget plan does not exist: {plan_path}"
-        )
+        raise PlaywrightAdapterError(f"TestBudget plan does not exist: {plan_path}")
 
     try:
-        plan = json.loads(
-            plan_path.read_text(
-                encoding="utf-8"
-            )
-        )
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
 
     except json.JSONDecodeError as error:
         raise PlaywrightAdapterError(
@@ -466,18 +374,12 @@ def load_playwright_test_ids(
         ) from error
 
     if not isinstance(plan, dict):
-        raise PlaywrightAdapterError(
-            "TestBudget plan must be a JSON object"
-        )
+        raise PlaywrightAdapterError("TestBudget plan must be a JSON object")
 
-    selected = plan.get(
-        "selected"
-    )
+    selected = plan.get("selected")
 
     if not isinstance(selected, list):
-        raise PlaywrightAdapterError(
-            "TestBudget plan must contain a selected list"
-        )
+        raise PlaywrightAdapterError("TestBudget plan must contain a selected list")
 
     test_ids = []
     seen = set()
@@ -487,21 +389,12 @@ def load_playwright_test_ids(
         start=1,
     ):
         if not isinstance(entry, dict):
-            raise PlaywrightAdapterError(
-                f"selected item {index} must be an object"
-            )
+            raise PlaywrightAdapterError(f"selected item {index} must be an object")
 
-        test_id = entry.get(
-            "test_id"
-        )
+        test_id = entry.get("test_id")
 
-        if (
-            not isinstance(test_id, str)
-            or not test_id.strip()
-        ):
-            raise PlaywrightAdapterError(
-                f"selected item {index} has no valid test_id"
-            )
+        if not isinstance(test_id, str) or not test_id.strip():
+            raise PlaywrightAdapterError(f"selected item {index} has no valid test_id")
 
         test_id = test_id.strip()
 
@@ -510,18 +403,12 @@ def load_playwright_test_ids(
             continue
 
         # Validate the ID before returning it.
-        split_playwright_test_id(
-            test_id
-        )
+        split_playwright_test_id(test_id)
 
         if test_id not in seen:
-            test_ids.append(
-                test_id
-            )
+            test_ids.append(test_id)
 
-            seen.add(
-                test_id
-            )
+            seen.add(test_id)
 
     return test_ids
 
@@ -551,19 +438,13 @@ def build_playwright_invocations(
         ]
     """
 
-    test_ids = load_playwright_test_ids(
-        plan_path
-    )
+    test_ids = load_playwright_test_ids(plan_path)
 
     groups = {}
     file_order = []
 
     for test_id in test_ids:
-        test_file, title = (
-            split_playwright_test_id(
-                test_id
-            )
-        )
+        test_file, title = split_playwright_test_id(test_id)
 
         if test_file not in groups:
             groups[test_file] = {
@@ -572,23 +453,10 @@ def build_playwright_invocations(
                 "titles": [],
             }
 
-            file_order.append(
-                test_file
-            )
+            file_order.append(test_file)
 
-        groups[
-            test_file
-        ]["test_ids"].append(
-            test_id
-        )
+        groups[test_file]["test_ids"].append(test_id)
 
-        groups[
-            test_file
-        ]["titles"].append(
-            title
-        )
+        groups[test_file]["titles"].append(title)
 
-    return [
-        groups[test_file]
-        for test_file in file_order
-    ]
+    return [groups[test_file] for test_file in file_order]
