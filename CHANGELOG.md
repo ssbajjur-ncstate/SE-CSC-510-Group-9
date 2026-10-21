@@ -45,5 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Documented the M0 evaluation decision and outstanding data requirements.
 
+- Added a retrospective for PR #6.
 - Document main-branch protection and pull-request workflow for M1.
 - Documented the risk-aware test-budget calibration track in EXTENSIONS.md.
