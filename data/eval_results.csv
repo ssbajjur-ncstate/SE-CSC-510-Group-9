@@ -1,0 +1,8 @@
+method,risk_level,budget_fraction,failing_runs,caught_runs,catch_rate,mean_apfdc,median_time_to_first_failure_s,data_quality
+import_only,global,0.3,2,0.0,0.0,0.562,1.45,insufficient: fewer than 10 failing runs
+most_failed,global,0.3,2,0.0,0.0,0.562,1.45,insufficient: fewer than 10 failing runs
+original,global,0.3,2,0.0,0.0,0.562,1.45,insufficient: fewer than 10 failing runs
+random,global,0.3,2,0.0,0.0,0.463,1.7,insufficient: fewer than 10 failing runs
+recently_failed,global,0.3,2,0.0,0.0,0.562,1.45,insufficient: fewer than 10 failing runs
+recently_modified,global,0.3,2,0.0,0.0,0.562,1.45,insufficient: fewer than 10 failing runs
+testbudget,global,0.3,2,0.0,0.0,0.562,1.45,insufficient: fewer than 10 failing runs

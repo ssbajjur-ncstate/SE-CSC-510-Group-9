@@ -30,3 +30,43 @@ Do not claim the hypothesis passed or failed without sufficient real historical 
 
 ## Status
 The evaluation protocol is documented; empirical validation remains pending.
+
+## Temporal replay implementation
+
+The M0 temporal replay harness is now implemented in
+`testbudget/replay.py`.
+
+It:
+
+- replays historical runs chronologically;
+- uses only history that existed before the run being evaluated;
+- evaluates every method at 30% of full-suite execution time;
+- compares TestBudget with original order, seeded random order,
+  pytest-ranking heuristics, and import-only ordering;
+- reports catch rate, APFDc, and median time to first failure;
+- writes reproducible results to `data/eval_results.csv`;
+- is reproducible with `make eval`.
+
+## Current M0 result
+
+The currently committed evaluation fixture does not contain enough
+historically failing runs to evaluate the project's headline claim.
+
+The evaluation protocol requires approximately 10 failing runs per risk level
+before the result is considered meaningful. The current fixture contains fewer
+than that threshold.
+
+Therefore the current M0 decision is:
+
+**RE-PLAN / INSUFFICIENT DATA**
+
+The replay infrastructure is working and reproducible, but the project does
+not claim that the 85% catch-rate target has been demonstrated on the current
+committed dataset.
+
+A larger real CI-history snapshot, such as the planned MealSlot back-fill,
+is required before making that empirical claim.
+
+Synthetic or fixture replay results are kept separate from claims about real
+repository performance.
+
