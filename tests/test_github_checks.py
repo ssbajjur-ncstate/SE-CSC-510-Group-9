@@ -16,7 +16,11 @@ from testbudget.github.checks import (
     test_file as file_of,
 )
 
-PLAN = json.loads((Path(__file__).parent.parent / "fixtures" / "plan.json").read_text())
+PLAN = json.loads(
+    (Path(__file__).parent.parent / "fixtures" / "plan.json").read_text(
+        encoding="utf-8"
+    )
+)
 
 
 def plan_with_skipped(n):
