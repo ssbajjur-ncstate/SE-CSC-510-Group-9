@@ -45,37 +45,22 @@ def _file_from_classname(classname):
     as the fallback source for the path.
     """
 
-    if (
-        not isinstance(classname, str)
-        or not classname.strip()
-    ):
+    if not isinstance(classname, str) or not classname.strip():
         raise PytestAdapterError(
             "JUnit testcase has neither a usable file nor classname"
         )
 
-    parts = [
-        part
-        for part in classname.strip().split(".")
-        if part
-    ]
+    parts = [part for part in classname.strip().split(".") if part]
 
     if not parts:
-        raise PytestAdapterError(
-            "JUnit classname cannot be converted to a test path"
-        )
+        raise PytestAdapterError("JUnit classname cannot be converted to a test path")
 
     # Pytest class-based tests can produce classnames like:
     #
     # tests.test_checkout.TestCheckout
     #
     # The last component is the Python class rather than the module.
-    if (
-        len(parts) > 1
-        and (
-            parts[-1].startswith("Test")
-            or parts[-1][:1].isupper()
-        )
-    ):
+    if len(parts) > 1 and (parts[-1].startswith("Test") or parts[-1][:1].isupper()):
         parts = parts[:-1]
 
     path = "/".join(parts)
@@ -116,33 +101,19 @@ def normalize_pytest_test_id(
             If a stable identity cannot be produced.
     """
 
-    if (
-        not isinstance(test_name, str)
-        or not test_name.strip()
-    ):
-        raise PytestAdapterError(
-            "JUnit testcase has no test name"
-        )
+    if not isinstance(test_name, str) or not test_name.strip():
+        raise PytestAdapterError("JUnit testcase has no test name")
 
     test_name = test_name.strip()
 
-    if (
-        isinstance(test_file, str)
-        and test_file.strip()
-    ):
-        path = _normalize_path(
-            test_file
-        )
+    if isinstance(test_file, str) and test_file.strip():
+        path = _normalize_path(test_file)
 
     else:
-        path = _file_from_classname(
-            classname
-        )
+        path = _file_from_classname(classname)
 
     if not path:
-        raise PytestAdapterError(
-            "JUnit testcase has no usable test path"
-        )
+        raise PytestAdapterError("JUnit testcase has no usable test path")
 
     return f"{path}::{test_name}"
 
@@ -152,10 +123,7 @@ def _testcase_status(testcase):
     Convert JUnit testcase children into TestBudget's status vocabulary.
     """
 
-    if (
-        testcase.find("failure") is not None
-        or testcase.find("error") is not None
-    ):
+    if testcase.find("failure") is not None or testcase.find("error") is not None:
         return "failed"
 
     if testcase.find("skipped") is not None:
@@ -175,9 +143,7 @@ def _testcase_duration(
     as 0.0 rather than causing the complete report to fail.
     """
 
-    raw_time = testcase.attrib.get(
-        "time"
-    )
+    raw_time = testcase.attrib.get("time")
 
     if raw_time in (
         None,
@@ -186,9 +152,7 @@ def _testcase_duration(
         return 0.0
 
     try:
-        duration = float(
-            raw_time
-        )
+        duration = float(raw_time)
 
     except (
         TypeError,
@@ -199,9 +163,7 @@ def _testcase_duration(
         ) from error
 
     if duration < 0:
-        raise PytestAdapterError(
-            f"{test_id}: JUnit duration cannot be negative"
-        )
+        raise PytestAdapterError(f"{test_id}: JUnit duration cannot be negative")
 
     return duration
 
@@ -235,43 +197,27 @@ def parse_pytest_junit(xml_path):
             test identity.
     """
 
-    xml_path = Path(
-        xml_path
-    )
+    xml_path = Path(xml_path)
 
     if not xml_path.exists():
-        raise PytestAdapterError(
-            f"JUnit report does not exist: {xml_path}"
-        )
+        raise PytestAdapterError(f"JUnit report does not exist: {xml_path}")
 
     try:
-        tree = ET.parse(
-            xml_path
-        )
+        tree = ET.parse(xml_path)
 
     except ET.ParseError as error:
-        raise PytestAdapterError(
-            f"invalid JUnit XML: {xml_path}"
-        ) from error
+        raise PytestAdapterError(f"invalid JUnit XML: {xml_path}") from error
 
     root = tree.getroot()
 
     attempts = {}
     results = []
 
-    for testcase in root.iter(
-        "testcase"
-    ):
+    for testcase in root.iter("testcase"):
         test_id = normalize_pytest_test_id(
-            test_file=testcase.attrib.get(
-                "file"
-            ),
-            test_name=testcase.attrib.get(
-                "name"
-            ),
-            classname=testcase.attrib.get(
-                "classname"
-            ),
+            test_file=testcase.attrib.get("file"),
+            test_name=testcase.attrib.get("name"),
+            classname=testcase.attrib.get("classname"),
         )
 
         attempt = (
@@ -287,9 +233,7 @@ def parse_pytest_junit(xml_path):
         results.append(
             {
                 "test_id": test_id,
-                "status": _testcase_status(
-                    testcase
-                ),
+                "status": _testcase_status(testcase),
                 "duration_s": (
                     _testcase_duration(
                         testcase,
@@ -301,6 +245,7 @@ def parse_pytest_junit(xml_path):
         )
 
     return results
+
 
 def load_selected_test_ids(
     plan_path,
@@ -320,21 +265,13 @@ def load_selected_test_ids(
             If the plan file does not exist or has an invalid structure.
     """
 
-    plan_path = Path(
-        plan_path
-    )
+    plan_path = Path(plan_path)
 
     if not plan_path.exists():
-        raise PytestAdapterError(
-            f"TestBudget plan does not exist: {plan_path}"
-        )
+        raise PytestAdapterError(f"TestBudget plan does not exist: {plan_path}")
 
     try:
-        plan = json.loads(
-            plan_path.read_text(
-                encoding="utf-8"
-            )
-        )
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
 
     except json.JSONDecodeError as error:
         raise PytestAdapterError(
@@ -342,18 +279,12 @@ def load_selected_test_ids(
         ) from error
 
     if not isinstance(plan, dict):
-        raise PytestAdapterError(
-            "TestBudget plan must be a JSON object"
-        )
+        raise PytestAdapterError("TestBudget plan must be a JSON object")
 
-    selected = plan.get(
-        "selected"
-    )
+    selected = plan.get("selected")
 
     if not isinstance(selected, list):
-        raise PytestAdapterError(
-            "TestBudget plan must contain a selected list"
-        )
+        raise PytestAdapterError("TestBudget plan must contain a selected list")
 
     selected_ids = []
     seen = set()
@@ -363,21 +294,12 @@ def load_selected_test_ids(
         start=1,
     ):
         if not isinstance(entry, dict):
-            raise PytestAdapterError(
-                f"selected item {index} must be an object"
-            )
+            raise PytestAdapterError(f"selected item {index} must be an object")
 
-        test_id = entry.get(
-            "test_id"
-        )
+        test_id = entry.get("test_id")
 
-        if (
-            not isinstance(test_id, str)
-            or not test_id.strip()
-        ):
-            raise PytestAdapterError(
-                f"selected item {index} has no valid test_id"
-            )
+        if not isinstance(test_id, str) or not test_id.strip():
+            raise PytestAdapterError(f"selected item {index} has no valid test_id")
 
         test_id = test_id.strip()
 
@@ -387,13 +309,9 @@ def load_selected_test_ids(
             continue
 
         if test_id not in seen:
-            selected_ids.append(
-                test_id
-            )
+            selected_ids.append(test_id)
 
-            seen.add(
-                test_id
-            )
+            seen.add(test_id)
 
     return selected_ids
 
@@ -411,21 +329,15 @@ def item_to_test_id(item):
         tests/test_cart.py::test_add
     """
 
-    nodeid = str(
-        item.nodeid
-    ).replace(
+    nodeid = str(item.nodeid).replace(
         "\\",
         "/",
     )
 
-    parts = nodeid.split(
-        "::"
-    )
+    parts = nodeid.split("::")
 
     if len(parts) < 2:
-        raise PytestAdapterError(
-            f"cannot normalize pytest nodeid: {nodeid}"
-        )
+        raise PytestAdapterError(f"cannot normalize pytest nodeid: {nodeid}")
 
     test_file = parts[0]
     test_name = parts[-1]
@@ -441,18 +353,14 @@ def pytest_addoption(parser):
     Register TestBudget's pytest command-line options.
     """
 
-    group = parser.getgroup(
-        "testbudget"
-    )
+    group = parser.getgroup("testbudget")
 
     group.addoption(
         "--testbudget-plan",
         action="store",
         default=None,
         metavar="PATH",
-        help=(
-            "Execute pytest tests selected by a TestBudget plan.json file."
-        ),
+        help=("Execute pytest tests selected by a TestBudget plan.json file."),
     )
 
 
@@ -473,46 +381,30 @@ def pytest_collection_modifyitems(
     4. all remaining pytest items are reported as deselected.
     """
 
-    plan_path = config.getoption(
-        "--testbudget-plan"
-    )
+    plan_path = config.getoption("--testbudget-plan")
 
     if not plan_path:
         return
 
     try:
-        selected_ids = (
-            load_selected_test_ids(
-                plan_path
-            )
-        )
+        selected_ids = load_selected_test_ids(plan_path)
 
     except PytestAdapterError as error:
-        raise pytest.UsageError(
-            str(error)
-        ) from error
+        raise pytest.UsageError(str(error)) from error
 
     collected_by_id = {}
 
     for item in items:
         try:
-            test_id = (
-                item_to_test_id(
-                    item
-                )
-            )
+            test_id = item_to_test_id(item)
 
         except PytestAdapterError as error:
-            raise pytest.UsageError(
-                str(error)
-            ) from error
+            raise pytest.UsageError(str(error)) from error
 
         collected_by_id.setdefault(
             test_id,
             [],
-        ).append(
-            item
-        )
+        ).append(item)
 
     selected_items = []
 
@@ -524,21 +416,11 @@ def pytest_collection_modifyitems(
             )
         )
 
-    selected_item_ids = {
-        id(item)
-        for item in selected_items
-    }
+    selected_item_ids = {id(item) for item in selected_items}
 
-    deselected_items = [
-        item
-        for item in items
-        if id(item)
-        not in selected_item_ids
-    ]
+    deselected_items = [item for item in items if id(item) not in selected_item_ids]
 
     if deselected_items:
-        config.hook.pytest_deselected(
-            items=deselected_items
-        )
+        config.hook.pytest_deselected(items=deselected_items)
 
     items[:] = selected_items
