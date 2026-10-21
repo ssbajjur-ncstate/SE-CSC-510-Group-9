@@ -11,14 +11,9 @@ from testbudget.adapters.pytest_adapter import (
     pytest_collection_modifyitems,
 )
 
-pytest_plugins = [
-    "pytester"
-]
+pytest_plugins = ["pytester"]
 
-FIXTURES = (
-    Path(__file__).parent
-    / "fixtures"
-)
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_normalize_pytest_test_id_from_file():
@@ -27,13 +22,7 @@ def test_normalize_pytest_test_id_from_file():
         "test_checkout_success",
     )
 
-    assert (
-        test_id
-        == (
-            "tests/test_checkout.py"
-            "::test_checkout_success"
-        )
-    )
+    assert test_id == ("tests/test_checkout.py::test_checkout_success")
 
 
 def test_normalize_windows_path():
@@ -42,13 +31,7 @@ def test_normalize_windows_path():
         "test_checkout_success",
     )
 
-    assert (
-        test_id
-        == (
-            "tests/test_checkout.py"
-            "::test_checkout_success"
-        )
-    )
+    assert test_id == ("tests/test_checkout.py::test_checkout_success")
 
 
 def test_normalize_test_id_from_classname():
@@ -58,13 +41,7 @@ def test_normalize_test_id_from_classname():
         "tests.test_payment",
     )
 
-    assert (
-        test_id
-        == (
-            "tests/test_payment.py"
-            "::test_payment_success"
-        )
-    )
+    assert test_id == ("tests/test_payment.py::test_payment_success")
 
 
 def test_classname_with_test_class_uses_module_path():
@@ -74,28 +51,16 @@ def test_classname_with_test_class_uses_module_path():
         "tests.test_payment.TestPayment",
     )
 
-    assert (
-        test_id
-        == (
-            "tests/test_payment.py"
-            "::test_payment_timeout"
-        )
-    )
+    assert test_id == ("tests/test_payment.py::test_payment_timeout")
 
 
 def test_parse_xunit1():
-    results = parse_pytest_junit(
-        FIXTURES
-        / "pytest_xunit1.xml"
-    )
+    results = parse_pytest_junit(FIXTURES / "pytest_xunit1.xml")
 
     assert len(results) == 4
 
     assert results[0] == {
-        "test_id": (
-            "tests/test_checkout.py"
-            "::test_checkout_success"
-        ),
+        "test_id": ("tests/test_checkout.py::test_checkout_success"),
         "status": "passed",
         "duration_s": 1.2,
         "attempt": 1,
@@ -103,80 +68,44 @@ def test_parse_xunit1():
 
 
 def test_xunit1_failure():
-    results = parse_pytest_junit(
-        FIXTURES
-        / "pytest_xunit1.xml"
-    )
+    results = parse_pytest_junit(FIXTURES / "pytest_xunit1.xml")
 
     failed = next(
         item
         for item in results
-        if item["test_id"].endswith(
-            "::test_checkout_invalid_card"
-        )
+        if item["test_id"].endswith("::test_checkout_invalid_card")
     )
 
     assert failed["status"] == "failed"
 
 
 def test_xunit1_skipped():
-    results = parse_pytest_junit(
-        FIXTURES
-        / "pytest_xunit1.xml"
-    )
+    results = parse_pytest_junit(FIXTURES / "pytest_xunit1.xml")
 
-    skipped = next(
-        item
-        for item in results
-        if item["test_id"].endswith(
-            "::test_cart"
-        )
-    )
+    skipped = next(item for item in results if item["test_id"].endswith("::test_cart"))
 
     assert skipped["status"] == "skipped"
 
 
 def test_missing_time_becomes_zero():
-    results = parse_pytest_junit(
-        FIXTURES
-        / "pytest_xunit1.xml"
-    )
+    results = parse_pytest_junit(FIXTURES / "pytest_xunit1.xml")
 
-    login = next(
-        item
-        for item in results
-        if item["test_id"].endswith(
-            "::test_login"
-        )
-    )
+    login = next(item for item in results if item["test_id"].endswith("::test_login"))
 
     assert login["duration_s"] == 0.0
 
 
 def test_parse_xunit2_without_file_attribute():
-    results = parse_pytest_junit(
-        FIXTURES
-        / "pytest_xunit2.xml"
-    )
+    results = parse_pytest_junit(FIXTURES / "pytest_xunit2.xml")
 
-    assert results[0]["test_id"] == (
-        "tests/test_payment.py"
-        "::test_payment_success"
-    )
+    assert results[0]["test_id"] == ("tests/test_payment.py::test_payment_success")
 
 
 def test_xunit2_error_counts_as_failed():
-    results = parse_pytest_junit(
-        FIXTURES
-        / "pytest_xunit2.xml"
-    )
+    results = parse_pytest_junit(FIXTURES / "pytest_xunit2.xml")
 
     timeout = next(
-        item
-        for item in results
-        if item["test_id"].endswith(
-            "::test_payment_timeout"
-        )
+        item for item in results if item["test_id"].endswith("::test_payment_timeout")
     )
 
     assert timeout["status"] == "failed"
@@ -185,25 +114,19 @@ def test_xunit2_error_counts_as_failed():
 def test_missing_report_raises_error(
     tmp_path,
 ):
-    missing = (
-        tmp_path / "missing.xml"
-    )
+    missing = tmp_path / "missing.xml"
 
     with pytest.raises(
         PytestAdapterError,
         match="does not exist",
     ):
-        parse_pytest_junit(
-            missing
-        )
+        parse_pytest_junit(missing)
 
 
 def test_invalid_xml_raises_error(
     tmp_path,
 ):
-    report = (
-        tmp_path / "broken.xml"
-    )
+    report = tmp_path / "broken.xml"
 
     report.write_text(
         "<testsuite>",
@@ -214,17 +137,13 @@ def test_invalid_xml_raises_error(
         PytestAdapterError,
         match="invalid JUnit XML",
     ):
-        parse_pytest_junit(
-            report
-        )
+        parse_pytest_junit(report)
 
 
 def test_missing_identity_raises_error(
     tmp_path,
 ):
-    report = (
-        tmp_path / "missing-id.xml"
-    )
+    report = tmp_path / "missing-id.xml"
 
     report.write_text(
         """
@@ -242,17 +161,13 @@ def test_missing_identity_raises_error(
         PytestAdapterError,
         match="neither a usable file nor classname",
     ):
-        parse_pytest_junit(
-            report
-        )
+        parse_pytest_junit(report)
 
 
 def test_invalid_duration_raises_error(
     tmp_path,
 ):
-    report = (
-        tmp_path / "bad-time.xml"
-    )
+    report = tmp_path / "bad-time.xml"
 
     report.write_text(
         """
@@ -271,17 +186,13 @@ def test_invalid_duration_raises_error(
         PytestAdapterError,
         match="invalid JUnit time",
     ):
-        parse_pytest_junit(
-            report
-        )
+        parse_pytest_junit(report)
 
 
 def test_repeated_testcases_increment_attempt(
     tmp_path,
 ):
-    report = (
-        tmp_path / "retry.xml"
-    )
+    report = tmp_path / "retry.xml"
 
     report.write_text(
         """
@@ -306,9 +217,7 @@ def test_repeated_testcases_increment_attempt(
         encoding="utf-8",
     )
 
-    results = parse_pytest_junit(
-        report
-    )
+    results = parse_pytest_junit(report)
 
     assert len(results) == 2
 
@@ -317,6 +226,7 @@ def test_repeated_testcases_increment_attempt(
 
     assert results[0]["status"] == "failed"
     assert results[1]["status"] == "passed"
+
 
 class FakeItem:
     """
@@ -342,9 +252,7 @@ class FakeHook:
         self,
         items,
     ):
-        self.deselected.extend(
-            items
-        )
+        self.deselected.extend(items)
 
 
 class FakeConfig:
@@ -363,10 +271,7 @@ class FakeConfig:
         self,
         name,
     ):
-        assert (
-            name
-            == "--testbudget-plan"
-        )
+        assert name == "--testbudget-plan"
 
         return self.plan_path
 
@@ -387,8 +292,7 @@ def write_plan(
                         "reason": "fixture",
                         "duration_s": 1.0,
                     }
-                    for test_id
-                    in test_ids
+                    for test_id in test_ids
                 ],
                 "skipped": [],
                 "catch_rate_estimate": 0.8,
@@ -401,48 +305,28 @@ def write_plan(
 def test_load_selected_ids_preserves_plan_order(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     write_plan(
         plan,
         [
-            (
-                "tests/test_payment.py"
-                "::test_payment"
-            ),
-            (
-                "tests/test_checkout.py"
-                "::test_checkout"
-            ),
+            ("tests/test_payment.py::test_payment"),
+            ("tests/test_checkout.py::test_checkout"),
         ],
     )
 
-    selected = (
-        load_selected_test_ids(
-            plan
-        )
-    )
+    selected = load_selected_test_ids(plan)
 
     assert selected == [
-        (
-            "tests/test_payment.py"
-            "::test_payment"
-        ),
-        (
-            "tests/test_checkout.py"
-            "::test_checkout"
-        ),
+        ("tests/test_payment.py::test_payment"),
+        ("tests/test_checkout.py::test_checkout"),
     ]
 
 
 def test_plan_ignores_non_pytest_ids(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     write_plan(
         plan,
@@ -452,18 +336,9 @@ def test_plan_ignores_non_pytest_ids(
         ],
     )
 
-    selected = (
-        load_selected_test_ids(
-            plan
-        )
-    )
+    selected = load_selected_test_ids(plan)
 
-    assert selected == [
-        (
-            "tests/test_checkout.py"
-            "::test_checkout"
-        )
-    ]
+    assert selected == [("tests/test_checkout.py::test_checkout")]
 
 
 def test_missing_plan_raises_error(
@@ -473,18 +348,13 @@ def test_missing_plan_raises_error(
         PytestAdapterError,
         match="does not exist",
     ):
-        load_selected_test_ids(
-            tmp_path
-            / "missing.json"
-        )
+        load_selected_test_ids(tmp_path / "missing.json")
 
 
 def test_invalid_plan_json_raises_error(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     plan.write_text(
         "{bad json",
@@ -495,17 +365,13 @@ def test_invalid_plan_json_raises_error(
         PytestAdapterError,
         match="invalid TestBudget plan JSON",
     ):
-        load_selected_test_ids(
-            plan
-        )
+        load_selected_test_ids(plan)
 
 
 def test_plan_without_selected_raises_error(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     plan.write_text(
         "{}",
@@ -516,62 +382,33 @@ def test_plan_without_selected_raises_error(
         PytestAdapterError,
         match="selected list",
     ):
-        load_selected_test_ids(
-            plan
-        )
+        load_selected_test_ids(plan)
 
 
 def test_pytest_item_to_test_id_removes_class_component():
-    item = FakeItem(
-        (
-            "tests/test_cart.py"
-            "::TestCart"
-            "::test_add_item"
-        )
-    )
+    item = FakeItem("tests/test_cart.py::TestCart::test_add_item")
 
-    assert (
-        item_to_test_id(
-            item
-        )
-        == (
-            "tests/test_cart.py"
-            "::test_add_item"
-        )
-    )
+    assert item_to_test_id(item) == ("tests/test_cart.py::test_add_item")
+
 
 def test_collection_is_reordered_to_plan(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     write_plan(
         plan,
         [
-            (
-                "tests/test_payment.py"
-                "::test_payment"
-            ),
-            (
-                "tests/test_checkout.py"
-                "::test_checkout"
-            ),
+            ("tests/test_payment.py::test_payment"),
+            ("tests/test_checkout.py::test_checkout"),
         ],
     )
 
-    checkout = FakeItem(
-        "tests/test_checkout.py::test_checkout"
-    )
+    checkout = FakeItem("tests/test_checkout.py::test_checkout")
 
-    login = FakeItem(
-        "tests/test_login.py::test_login"
-    )
+    login = FakeItem("tests/test_login.py::test_login")
 
-    payment = FakeItem(
-        "tests/test_payment.py::test_payment"
-    )
+    payment = FakeItem("tests/test_payment.py::test_payment")
 
     items = [
         checkout,
@@ -579,9 +416,7 @@ def test_collection_is_reordered_to_plan(
         payment,
     ]
 
-    config = FakeConfig(
-        plan
-    )
+    config = FakeConfig(plan)
 
     pytest_collection_modifyitems(
         config,
@@ -597,69 +432,45 @@ def test_collection_is_reordered_to_plan(
 def test_tests_not_in_plan_are_deselected(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     write_plan(
         plan,
-        [
-            (
-                "tests/test_checkout.py"
-                "::test_checkout"
-            )
-        ],
+        [("tests/test_checkout.py::test_checkout")],
     )
 
-    checkout = FakeItem(
-        "tests/test_checkout.py::test_checkout"
-    )
+    checkout = FakeItem("tests/test_checkout.py::test_checkout")
 
-    login = FakeItem(
-        "tests/test_login.py::test_login"
-    )
+    login = FakeItem("tests/test_login.py::test_login")
 
     items = [
         login,
         checkout,
     ]
 
-    config = FakeConfig(
-        plan
-    )
+    config = FakeConfig(plan)
 
     pytest_collection_modifyitems(
         config,
         items,
     )
 
-    assert items == [
-        checkout
-    ]
+    assert items == [checkout]
 
-    assert (
-        config.hook.deselected
-        == [login]
-    )
+    assert config.hook.deselected == [login]
 
 
 def test_collection_unchanged_without_plan():
-    checkout = FakeItem(
-        "tests/test_checkout.py::test_checkout"
-    )
+    checkout = FakeItem("tests/test_checkout.py::test_checkout")
 
-    login = FakeItem(
-        "tests/test_login.py::test_login"
-    )
+    login = FakeItem("tests/test_login.py::test_login")
 
     items = [
         checkout,
         login,
     ]
 
-    config = FakeConfig(
-        None
-    )
+    config = FakeConfig(None)
 
     pytest_collection_modifyitems(
         config,
@@ -670,6 +481,7 @@ def test_collection_unchanged_without_plan():
         checkout,
         login,
     ]
+
 
 def test_real_pytest_plugin_reorders_and_cuts(
     pytester,
@@ -687,22 +499,13 @@ def test_gamma():
 """
     )
 
-    plan_path = (
-        pytester.path
-        / "plan.json"
-    )
+    plan_path = pytester.path / "plan.json"
 
     write_plan(
         plan_path,
         [
-            (
-                "test_example.py"
-                "::test_gamma"
-            ),
-            (
-                "test_example.py"
-                "::test_alpha"
-            ),
+            ("test_example.py::test_gamma"),
+            ("test_example.py::test_alpha"),
         ],
     )
 

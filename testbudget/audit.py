@@ -25,20 +25,14 @@ def _unique_test_ids(
             )
             or not test_id.strip()
         ):
-            raise AuditModeError(
-                f"test ID {index} is invalid"
-            )
+            raise AuditModeError(f"test ID {index} is invalid")
 
         test_id = test_id.strip()
 
         if test_id not in seen:
-            unique.append(
-                test_id
-            )
+            unique.append(test_id)
 
-            seen.add(
-                test_id
-            )
+            seen.add(test_id)
 
     return unique
 
@@ -51,17 +45,13 @@ def _plan_test_ids(
     Extract test IDs from one TestBudget plan list.
     """
 
-    entries = plan.get(
-        field
-    )
+    entries = plan.get(field)
 
     if not isinstance(
         entries,
         list,
     ):
-        raise AuditModeError(
-            f"plan must contain a {field} list"
-        )
+        raise AuditModeError(f"plan must contain a {field} list")
 
     test_ids = []
 
@@ -73,13 +63,9 @@ def _plan_test_ids(
             entry,
             dict,
         ):
-            raise AuditModeError(
-                f"{field} item {index} must be an object"
-            )
+            raise AuditModeError(f"{field} item {index} must be an object")
 
-        test_id = entry.get(
-            "test_id"
-        )
+        test_id = entry.get("test_id")
 
         if (
             not isinstance(
@@ -88,13 +74,9 @@ def _plan_test_ids(
             )
             or not test_id.strip()
         ):
-            raise AuditModeError(
-                f"{field} item {index} has no valid test_id"
-            )
+            raise AuditModeError(f"{field} item {index} has no valid test_id")
 
-        test_ids.append(
-            test_id.strip()
-        )
+        test_ids.append(test_id.strip())
 
     return test_ids
 
@@ -143,17 +125,11 @@ def build_execution_policy(
         plan,
         dict,
     ):
-        raise AuditModeError(
-            "plan must be an object"
-        )
+        raise AuditModeError("plan must be an object")
 
-    all_tests = _unique_test_ids(
-        all_test_ids
-    )
+    all_tests = _unique_test_ids(all_test_ids)
 
-    known = set(
-        all_tests
-    )
+    known = set(all_tests)
 
     planned_selected = _plan_test_ids(
         plan,
@@ -165,58 +141,32 @@ def build_execution_policy(
         "skipped",
     )
 
-    referenced = (
-        planned_selected
-        + planned_skipped
-    )
+    referenced = planned_selected + planned_skipped
 
-    unknown = [
-        test_id
-        for test_id in referenced
-        if test_id not in known
-    ]
+    unknown = [test_id for test_id in referenced if test_id not in known]
 
     if unknown:
-        raise AuditModeError(
-            "plan references unknown test ID: "
-            + unknown[0]
-        )
+        raise AuditModeError("plan references unknown test ID: " + unknown[0])
 
     if force_full:
         mode = "reviewer_full"
-        execute_test_ids = list(
-            all_tests
-        )
+        execute_test_ids = list(all_tests)
 
     elif audit_mode:
         mode = "audit"
-        execute_test_ids = list(
-            all_tests
-        )
+        execute_test_ids = list(all_tests)
 
     else:
         mode = "normal"
-        execute_test_ids = list(
-            planned_selected
-        )
+        execute_test_ids = list(planned_selected)
 
     return {
         "mode": mode,
-        "audit_mode": bool(
-            audit_mode
-        ),
-        "force_full": bool(
-            force_full
-        ),
-        "execute_test_ids": (
-            execute_test_ids
-        ),
-        "planned_selected_test_ids": list(
-            planned_selected
-        ),
-        "planned_skipped_test_ids": list(
-            planned_skipped
-        ),
+        "audit_mode": bool(audit_mode),
+        "force_full": bool(force_full),
+        "execute_test_ids": (execute_test_ids),
+        "planned_selected_test_ids": list(planned_selected),
+        "planned_skipped_test_ids": list(planned_skipped),
     }
 
 
@@ -250,14 +200,9 @@ def apply_reviewer_command(
             command,
             dict,
         )
-        or command.get(
-            "action"
-        )
-        != "full"
+        or command.get("action") != "full"
     ):
-        raise AuditModeError(
-            "unsupported reviewer command"
-        )
+        raise AuditModeError("unsupported reviewer command")
 
     return build_execution_policy(
         plan,

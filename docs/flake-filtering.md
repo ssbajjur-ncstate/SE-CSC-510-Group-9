@@ -112,9 +112,7 @@ from testbudget.flakes import (
     mark_flaky_failures,
 )
 
-marked = mark_flaky_failures(
-    results
-)
+marked = mark_flaky_failures(results)
 ```
 
 Each returned result contains:
@@ -149,9 +147,7 @@ from testbudget.flakes import (
     filter_non_flaky_failures,
 )
 
-failures = filter_non_flaky_failures(
-    results
-)
+failures = filter_non_flaky_failures(results)
 ```
 
 This returns only failures that remain after flake filtering.

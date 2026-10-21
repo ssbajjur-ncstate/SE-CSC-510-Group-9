@@ -1,0 +1,14 @@
+{
+  "title": "TestBudget: history-driven test selection under a CI time budget",
+  "upload_type": "software",
+  "description": "TestBudget decides which of a repository's existing tests run on a pull request, in what order, and for how long, using the repository's own CI history.",
+  "license": "MIT",
+  "version": "0.1.0",
+  "creators": [
+    {"name": "Koul, Vedantt", "affiliation": "NC State University"},
+    {"name": "ssbajjur-ncstate", "affiliation": "NC State University"},
+    {"name": "Shelar, Sakshi", "affiliation": "NC State University"},
+    {"name": "Joshi, Namrata", "affiliation": "NC State University"}
+  ],
+  "keywords": ["test selection", "continuous integration", "regression testing"]
+}

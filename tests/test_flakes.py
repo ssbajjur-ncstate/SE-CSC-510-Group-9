@@ -10,10 +10,7 @@ from testbudget.flakes import (
 def make_result(
     *,
     sha="abc123",
-    test_id=(
-        "tests/test_cart.py"
-        "::test_cart"
-    ),
+    test_id=("tests/test_cart.py::test_cart"),
     status="failed",
     duration_s=1.0,
     attempt=1,
@@ -32,10 +29,7 @@ def make_result(
 
 
 def test_empty_history_returns_empty_list():
-    assert (
-        mark_flaky_failures([])
-        == []
-    )
+    assert mark_flaky_failures([]) == []
 
 
 def test_failure_that_passes_on_retry_is_flaky():
@@ -50,16 +44,11 @@ def test_failure_that_passes_on_retry_is_flaky():
         ),
     ]
 
-    marked = mark_flaky_failures(
-        results
-    )
+    marked = mark_flaky_failures(results)
 
     assert marked[0]["flaky"] is True
 
-    assert (
-        marked[0]["flake_reason"]
-        == "passed_on_retry"
-    )
+    assert marked[0]["flake_reason"] == "passed_on_retry"
 
     assert marked[1]["flaky"] is False
 
@@ -76,16 +65,11 @@ def test_failure_that_passes_on_same_sha_is_flaky():
         ),
     ]
 
-    marked = mark_flaky_failures(
-        results
-    )
+    marked = mark_flaky_failures(results)
 
     assert marked[0]["flaky"] is True
 
-    assert (
-        marked[0]["flake_reason"]
-        == "passed_on_same_sha"
-    )
+    assert marked[0]["flake_reason"] == "passed_on_same_sha"
 
 
 def test_pass_on_different_sha_does_not_make_failure_flaky():
@@ -100,39 +84,26 @@ def test_pass_on_different_sha_does_not_make_failure_flaky():
         ),
     ]
 
-    marked = mark_flaky_failures(
-        results
-    )
+    marked = mark_flaky_failures(results)
 
     assert marked[0]["flaky"] is False
 
-    assert (
-        marked[0]["flake_reason"]
-        is None
-    )
+    assert marked[0]["flake_reason"] is None
 
 
 def test_pass_from_different_test_does_not_make_failure_flaky():
     results = [
         make_result(
-            test_id=(
-                "tests/test_cart.py"
-                "::test_cart"
-            ),
+            test_id=("tests/test_cart.py::test_cart"),
             status="failed",
         ),
         make_result(
-            test_id=(
-                "tests/test_login.py"
-                "::test_login"
-            ),
+            test_id=("tests/test_login.py::test_login"),
             status="passed",
         ),
     ]
 
-    marked = mark_flaky_failures(
-        results
-    )
+    marked = mark_flaky_failures(results)
 
     assert marked[0]["flaky"] is False
 
@@ -144,16 +115,11 @@ def test_failure_without_pass_remains_non_flaky():
         )
     ]
 
-    marked = mark_flaky_failures(
-        results
-    )
+    marked = mark_flaky_failures(results)
 
     assert marked[0]["flaky"] is False
 
-    assert (
-        marked[0]["flake_reason"]
-        is None
-    )
+    assert marked[0]["flake_reason"] is None
 
 
 def test_skipped_test_is_not_marked_flaky():
@@ -167,9 +133,7 @@ def test_skipped_test_is_not_marked_flaky():
         ),
     ]
 
-    marked = mark_flaky_failures(
-        results
-    )
+    marked = mark_flaky_failures(results)
 
     assert marked[0]["flaky"] is False
 
@@ -190,34 +154,20 @@ def test_multiple_failures_become_flaky_when_same_sha_passes():
         ),
     ]
 
-    marked = mark_flaky_failures(
-        results
-    )
+    marked = mark_flaky_failures(results)
 
     assert marked[0]["flaky"] is True
     assert marked[1]["flaky"] is True
 
-    assert (
-        marked[0]["flake_reason"]
-        == "passed_on_retry"
-    )
+    assert marked[0]["flake_reason"] == "passed_on_retry"
 
-    assert (
-        marked[1]["flake_reason"]
-        == "passed_on_retry"
-    )
+    assert marked[1]["flake_reason"] == "passed_on_retry"
 
 
 def test_filter_non_flaky_failures_removes_flaky_failures():
-    flaky_test = (
-        "tests/test_cart.py"
-        "::test_cart"
-    )
+    flaky_test = "tests/test_cart.py::test_cart"
 
-    real_failure = (
-        "tests/test_payment.py"
-        "::test_payment"
-    )
+    real_failure = "tests/test_payment.py::test_payment"
 
     results = [
         make_result(
@@ -237,18 +187,11 @@ def test_filter_non_flaky_failures_removes_flaky_failures():
         ),
     ]
 
-    failures = (
-        filter_non_flaky_failures(
-            results
-        )
-    )
+    failures = filter_non_flaky_failures(results)
 
     assert len(failures) == 1
 
-    assert (
-        failures[0]["test_id"]
-        == real_failure
-    )
+    assert failures[0]["test_id"] == real_failure
 
     assert failures[0]["flaky"] is False
 
@@ -266,9 +209,7 @@ def test_input_records_are_not_mutated():
         ),
     ]
 
-    mark_flaky_failures(
-        results
-    )
+    mark_flaky_failures(results)
 
     assert "flaky" not in original
     assert "flake_reason" not in original
@@ -276,18 +217,12 @@ def test_input_records_are_not_mutated():
 
 def test_input_order_is_preserved():
     first = make_result(
-        test_id=(
-            "tests/test_first.py"
-            "::test_first"
-        ),
+        test_id=("tests/test_first.py::test_first"),
         status="failed",
     )
 
     second = make_result(
-        test_id=(
-            "tests/test_second.py"
-            "::test_second"
-        ),
+        test_id=("tests/test_second.py::test_second"),
         status="failed",
     )
 
@@ -298,10 +233,7 @@ def test_input_order_is_preserved():
         ]
     )
 
-    assert [
-        result["test_id"]
-        for result in marked
-    ] == [
+    assert [result["test_id"] for result in marked] == [
         first["test_id"],
         second["test_id"],
     ]
@@ -316,81 +248,58 @@ def test_missing_required_field_raises_error():
         FlakeFilterError,
         match="missing required fields",
     ):
-        mark_flaky_failures(
-            [result]
-        )
+        mark_flaky_failures([result])
 
 
 def test_invalid_status_raises_error():
-    result = make_result(
-        status="broken"
-    )
+    result = make_result(status="broken")
 
     with pytest.raises(
         FlakeFilterError,
         match="unsupported status",
     ):
-        mark_flaky_failures(
-            [result]
-        )
+        mark_flaky_failures([result])
 
 
 def test_invalid_attempt_raises_error():
-    result = make_result(
-        attempt=0
-    )
+    result = make_result(attempt=0)
 
     with pytest.raises(
         FlakeFilterError,
         match="invalid attempt",
     ):
-        mark_flaky_failures(
-            [result]
-        )
+        mark_flaky_failures([result])
 
 
 def test_negative_duration_raises_error():
-    result = make_result(
-        duration_s=-1.0
-    )
+    result = make_result(duration_s=-1.0)
 
     with pytest.raises(
         FlakeFilterError,
         match="invalid duration_s",
     ):
-        mark_flaky_failures(
-            [result]
-        )
+        mark_flaky_failures([result])
+
 
 def test_pytest_style_retry_history_is_filtered():
     results = [
         {
             "sha": "abc123",
-            "test_id": (
-                "tests/test_checkout.py"
-                "::test_checkout"
-            ),
+            "test_id": ("tests/test_checkout.py::test_checkout"),
             "status": "failed",
             "duration_s": 1.4,
             "attempt": 1,
         },
         {
             "sha": "abc123",
-            "test_id": (
-                "tests/test_checkout.py"
-                "::test_checkout"
-            ),
+            "test_id": ("tests/test_checkout.py::test_checkout"),
             "status": "passed",
             "duration_s": 0.8,
             "attempt": 2,
         },
     ]
 
-    real_failures = (
-        filter_non_flaky_failures(
-            results
-        )
-    )
+    real_failures = filter_non_flaky_failures(results)
 
     assert real_failures == []
 
@@ -399,20 +308,13 @@ def test_deduplicated_playwright_retry_is_not_a_failure():
     results = [
         {
             "sha": "abc123",
-            "test_id": (
-                "tests/checkout.spec.ts "
-                "› checkout succeeds"
-            ),
+            "test_id": ("tests/checkout.spec.ts › checkout succeeds"),
             "status": "passed",
             "duration_s": 0.8,
             "attempt": 2,
         }
     ]
 
-    real_failures = (
-        filter_non_flaky_failures(
-            results
-        )
-    )
+    real_failures = filter_non_flaky_failures(results)
 
     assert real_failures == []

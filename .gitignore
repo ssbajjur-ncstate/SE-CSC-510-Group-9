@@ -1,8 +1,11 @@
 .venv/
+venv/
 __pycache__/
 .pytest_cache/
 *.pyc
 *.db
+*.sqlite
+*.sqlite3
 .DS_Store
 *.egg-info/
 build/
@@ -11,8 +14,8 @@ dist/
 htmlcov/
 .mypy_cache/
 .ruff_cache/
-
-# Local environments and generated state
+site/
+coverage.xml
 node_modules/
 .env
 .env.*

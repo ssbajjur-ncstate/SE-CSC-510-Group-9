@@ -23,9 +23,7 @@ def create_legacy_db(
     Create a fixture database using TestBudget's prototype schema.
     """
 
-    connection = sqlite3.connect(
-        path
-    )
+    connection = sqlite3.connect(path)
 
     connection.execute(
         """
@@ -99,97 +97,58 @@ def test_legacy_test_id_normalizes_pytest_classname():
         "test_checkout_success",
     )
 
-    assert (
-        test_id
-        == (
-            "tests/test_checkout.py"
-            "::test_checkout_success"
-        )
-    )
+    assert test_id == ("tests/test_checkout.py::test_checkout_success")
 
 
 def test_read_legacy_history_groups_rows_into_runs(
     tmp_path,
 ):
-    db_path = (
-        tmp_path / "legacy.db"
-    )
+    db_path = tmp_path / "legacy.db"
 
     create_legacy_db(
         db_path,
         sample_rows(),
     )
 
-    runs, results = (
-        read_legacy_history(
-            db_path
-        )
-    )
+    runs, results = read_legacy_history(db_path)
 
     assert len(runs) == 2
     assert len(results) == 3
 
     checkout_run = next(
-        run
-        for run in runs
-        if run["changed_files"]
-        == ["src/checkout.py"]
+        run for run in runs if run["changed_files"] == ["src/checkout.py"]
     )
 
-    assert (
-        checkout_run["branch"]
-        == "legacy"
-    )
+    assert checkout_run["branch"] == "legacy"
 
-    assert checkout_run[
-        "sha"
-    ].startswith("legacy-")
+    assert checkout_run["sha"].startswith("legacy-")
 
 
 def test_legacy_results_reference_generated_run(
     tmp_path,
 ):
-    db_path = (
-        tmp_path / "legacy.db"
-    )
+    db_path = tmp_path / "legacy.db"
 
     create_legacy_db(
         db_path,
         sample_rows(),
     )
 
-    runs, results = (
-        read_legacy_history(
-            db_path
-        )
-    )
+    runs, results = read_legacy_history(db_path)
 
-    run_shas = {
-        run["sha"]
-        for run in runs
-    }
+    run_shas = {run["sha"] for run in runs}
 
-    assert all(
-        result["sha"] in run_shas
-        for result in results
-    )
+    assert all(result["sha"] in run_shas for result in results)
 
-    assert all(
-        result["attempt"] == 1
-        for result in results
-    )
+    assert all(result["attempt"] == 1 for result in results)
 
 
 def test_migration_writes_valid_jsonl_history(
     tmp_path,
 ):
-    db_path = (
-        tmp_path / "legacy.db"
-    )
+    db_path = tmp_path / "legacy.db"
 
-    history_dir = (
-        tmp_path / "history"
-    )
+    history_dir = tmp_path / "history"
 
     create_legacy_db(
         db_path,
@@ -201,21 +160,11 @@ def test_migration_writes_valid_jsonl_history(
         history_dir,
     )
 
-    assert (
-        summary["runs_added"]
-        == 2
-    )
+    assert summary["runs_added"] == 2
 
-    assert (
-        summary["results_added"]
-        == 3
-    )
+    assert summary["results_added"] == 3
 
-    runs, results = (
-        load_history_records(
-            history_dir
-        )
-    )
+    runs, results = load_history_records(history_dir)
 
     assert len(runs) == 2
     assert len(results) == 3
@@ -224,13 +173,9 @@ def test_migration_writes_valid_jsonl_history(
 def test_migration_is_idempotent(
     tmp_path,
 ):
-    db_path = (
-        tmp_path / "legacy.db"
-    )
+    db_path = tmp_path / "legacy.db"
 
-    history_dir = (
-        tmp_path / "history"
-    )
+    history_dir = tmp_path / "history"
 
     create_legacy_db(
         db_path,
@@ -247,26 +192,13 @@ def test_migration_is_idempotent(
         history_dir,
     )
 
-    assert (
-        second["runs_added"]
-        == 0
-    )
+    assert second["runs_added"] == 0
 
-    assert (
-        second["results_added"]
-        == 0
-    )
+    assert second["results_added"] == 0
 
-    assert (
-        second["runs_skipped"]
-        == 2
-    )
+    assert second["runs_skipped"] == 2
 
-    runs, results = (
-        load_history_records(
-            history_dir
-        )
-    )
+    runs, results = load_history_records(history_dir)
 
     assert len(runs) == 2
     assert len(results) == 3
@@ -275,13 +207,9 @@ def test_migration_is_idempotent(
 def test_migration_preserves_existing_history(
     tmp_path,
 ):
-    db_path = (
-        tmp_path / "legacy.db"
-    )
+    db_path = tmp_path / "legacy.db"
 
-    history_dir = (
-        tmp_path / "history"
-    )
+    history_dir = tmp_path / "history"
 
     history_dir.mkdir()
 
@@ -292,41 +220,26 @@ def test_migration_preserves_existing_history(
 
     existing_run = {
         "sha": "real123",
-        "timestamp": (
-            "2026-10-19T10:00:00Z"
-        ),
+        "timestamp": ("2026-10-19T10:00:00Z"),
         "branch": "main",
-        "changed_files": [
-            "src/cart.py"
-        ],
+        "changed_files": ["src/cart.py"],
     }
 
     existing_result = {
         "sha": "real123",
-        "test_id": (
-            "tests/test_cart.py"
-            "::test_add_item"
-        ),
+        "test_id": ("tests/test_cart.py::test_add_item"),
         "status": "passed",
         "duration_s": 0.5,
         "attempt": 1,
     }
 
-    (
-        history_dir
-        / "runs.jsonl"
-    ).write_text(
-        json.dumps(existing_run)
-        + "\n",
+    (history_dir / "runs.jsonl").write_text(
+        json.dumps(existing_run) + "\n",
         encoding="utf-8",
     )
 
-    (
-        history_dir
-        / "results.jsonl"
-    ).write_text(
-        json.dumps(existing_result)
-        + "\n",
+    (history_dir / "results.jsonl").write_text(
+        json.dumps(existing_result) + "\n",
         encoding="utf-8",
     )
 
@@ -335,22 +248,11 @@ def test_migration_preserves_existing_history(
         history_dir,
     )
 
-    runs, results = (
-        load_history_records(
-            history_dir
-        )
-    )
+    runs, results = load_history_records(history_dir)
 
-    assert any(
-        run["sha"] == "real123"
-        for run in runs
-    )
+    assert any(run["sha"] == "real123" for run in runs)
 
-    assert any(
-        result["sha"]
-        == "real123"
-        for result in results
-    )
+    assert any(result["sha"] == "real123" for result in results)
 
     assert len(runs) == 3
     assert len(results) == 4
@@ -359,29 +261,21 @@ def test_migration_preserves_existing_history(
 def test_missing_database_raises_error(
     tmp_path,
 ):
-    missing = (
-        tmp_path / "missing.db"
-    )
+    missing = tmp_path / "missing.db"
 
     with pytest.raises(
         LegacyMigrationError,
         match="does not exist",
     ):
-        read_legacy_history(
-            missing
-        )
+        read_legacy_history(missing)
 
 
 def test_missing_test_runs_table_raises_error(
     tmp_path,
 ):
-    db_path = (
-        tmp_path / "legacy.db"
-    )
+    db_path = tmp_path / "legacy.db"
 
-    connection = sqlite3.connect(
-        db_path
-    )
+    connection = sqlite3.connect(db_path)
 
     connection.execute(
         """
@@ -398,21 +292,15 @@ def test_missing_test_runs_table_raises_error(
         LegacyMigrationError,
         match="test_runs table",
     ):
-        read_legacy_history(
-            db_path
-        )
+        read_legacy_history(db_path)
 
 
 def test_incomplete_legacy_schema_raises_error(
     tmp_path,
 ):
-    db_path = (
-        tmp_path / "legacy.db"
-    )
+    db_path = tmp_path / "legacy.db"
 
-    connection = sqlite3.connect(
-        db_path
-    )
+    connection = sqlite3.connect(db_path)
 
     connection.execute(
         """
@@ -430,17 +318,13 @@ def test_incomplete_legacy_schema_raises_error(
         LegacyMigrationError,
         match="missing required columns",
     ):
-        read_legacy_history(
-            db_path
-        )
+        read_legacy_history(db_path)
 
 
 def test_invalid_legacy_status_raises_error(
     tmp_path,
 ):
-    db_path = (
-        tmp_path / "legacy.db"
-    )
+    db_path = tmp_path / "legacy.db"
 
     rows = [
         (
@@ -462,17 +346,13 @@ def test_invalid_legacy_status_raises_error(
         LegacyMigrationError,
         match="unsupported status",
     ):
-        read_legacy_history(
-            db_path
-        )
+        read_legacy_history(db_path)
 
 
 def test_negative_legacy_duration_raises_error(
     tmp_path,
 ):
-    db_path = (
-        tmp_path / "legacy.db"
-    )
+    db_path = tmp_path / "legacy.db"
 
     rows = [
         (
@@ -494,22 +374,16 @@ def test_negative_legacy_duration_raises_error(
         LegacyMigrationError,
         match="invalid duration",
     ):
-        read_legacy_history(
-            db_path
-        )
+        read_legacy_history(db_path)
 
 
 def test_cli_reports_success(
     tmp_path,
     capsys,
 ):
-    db_path = (
-        tmp_path / "legacy.db"
-    )
+    db_path = tmp_path / "legacy.db"
 
-    history_dir = (
-        tmp_path / "history"
-    )
+    history_dir = tmp_path / "history"
 
     create_legacy_db(
         db_path,
@@ -529,12 +403,6 @@ def test_cli_reports_success(
 
     assert exit_code == 0
 
-    assert (
-        "TESTBUDGET LEGACY HISTORY MIGRATION"
-        in output.out
-    )
+    assert "TESTBUDGET LEGACY HISTORY MIGRATION" in output.out
 
-    assert (
-        "Runs added: 2"
-        in output.out
-    )
+    assert "Runs added: 2" in output.out

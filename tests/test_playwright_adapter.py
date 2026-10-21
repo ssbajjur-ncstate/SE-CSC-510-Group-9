@@ -13,79 +13,48 @@ from testbudget.adapters.playwright_adapter import (
     split_playwright_test_id,
 )
 
-
-FIXTURES = (
-    Path(__file__).parent
-    / "fixtures"
-)
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_normalize_playwright_test_id():
-    test_id = (
-        normalize_playwright_test_id(
-            "tests/checkout.spec.ts",
-            "checkout succeeds",
-        )
+    test_id = normalize_playwright_test_id(
+        "tests/checkout.spec.ts",
+        "checkout succeeds",
     )
 
-    assert test_id == (
-        "tests/checkout.spec.ts "
-        "› checkout succeeds"
-    )
+    assert test_id == ("tests/checkout.spec.ts › checkout succeeds")
 
 
 def test_windows_path_is_normalized():
-    test_id = (
-        normalize_playwright_test_id(
-            r"tests\checkout.spec.ts",
-            "checkout succeeds",
-        )
+    test_id = normalize_playwright_test_id(
+        r"tests\checkout.spec.ts",
+        "checkout succeeds",
     )
 
-    assert test_id == (
-        "tests/checkout.spec.ts "
-        "› checkout succeeds"
-    )
+    assert test_id == ("tests/checkout.spec.ts › checkout succeeds")
 
 
 def test_old_line_column_suffix_is_removed():
-    path = normalize_playwright_file(
-        "tests/login.spec.ts:13:5"
-    )
+    path = normalize_playwright_file("tests/login.spec.ts:13:5")
 
-    assert path == (
-        "tests/login.spec.ts"
-    )
+    assert path == ("tests/login.spec.ts")
 
 
 def test_parse_playwright_junit():
-    results = parse_playwright_junit(
-        FIXTURES
-        / "playwright_junit.xml"
-    )
+    results = parse_playwright_junit(FIXTURES / "playwright_junit.xml")
 
     assert len(results) == 6
 
 
 def test_playwright_pass():
-    results = parse_playwright_junit(
-        FIXTURES
-        / "playwright_junit.xml"
-    )
+    results = parse_playwright_junit(FIXTURES / "playwright_junit.xml")
 
     result = next(
-        item
-        for item in results
-        if item["test_id"].endswith(
-            "› checkout succeeds"
-        )
+        item for item in results if item["test_id"].endswith("› checkout succeeds")
     )
 
     assert result == {
-        "test_id": (
-            "tests/checkout.spec.ts "
-            "› checkout succeeds"
-        ),
+        "test_id": ("tests/checkout.spec.ts › checkout succeeds"),
         "status": "passed",
         "duration_s": 1.2,
         "attempt": 1,
@@ -93,17 +62,12 @@ def test_playwright_pass():
 
 
 def test_playwright_failure():
-    results = parse_playwright_junit(
-        FIXTURES
-        / "playwright_junit.xml"
-    )
+    results = parse_playwright_junit(FIXTURES / "playwright_junit.xml")
 
     result = next(
         item
         for item in results
-        if item["test_id"].endswith(
-            "› invalid card is rejected"
-        )
+        if item["test_id"].endswith("› invalid card is rejected")
     )
 
     assert result["status"] == "failed"
@@ -112,34 +76,22 @@ def test_playwright_failure():
 
 
 def test_playwright_skip():
-    results = parse_playwright_junit(
-        FIXTURES
-        / "playwright_junit.xml"
-    )
+    results = parse_playwright_junit(FIXTURES / "playwright_junit.xml")
 
     result = next(
-        item
-        for item in results
-        if item["test_id"].endswith(
-            "› coupon is optional"
-        )
+        item for item in results if item["test_id"].endswith("› coupon is optional")
     )
 
     assert result["status"] == "skipped"
 
 
 def test_flaky_retry_counts_once():
-    results = parse_playwright_junit(
-        FIXTURES
-        / "playwright_junit.xml"
-    )
+    results = parse_playwright_junit(FIXTURES / "playwright_junit.xml")
 
     matches = [
         item
         for item in results
-        if item["test_id"].endswith(
-            "› payment eventually succeeds"
-        )
+        if item["test_id"].endswith("› payment eventually succeeds")
     ]
 
     assert len(matches) == 1
@@ -151,17 +103,12 @@ def test_flaky_retry_counts_once():
 
 
 def test_flaky_retry_uses_final_pass_duration():
-    results = parse_playwright_junit(
-        FIXTURES
-        / "playwright_junit.xml"
-    )
+    results = parse_playwright_junit(FIXTURES / "playwright_junit.xml")
 
     result = next(
         item
         for item in results
-        if item["test_id"].endswith(
-            "› payment eventually succeeds"
-        )
+        if item["test_id"].endswith("› payment eventually succeeds")
     )
 
     # The failed retry took 1.4 seconds.
@@ -170,17 +117,12 @@ def test_flaky_retry_uses_final_pass_duration():
 
 
 def test_failed_retry_counts_once():
-    results = parse_playwright_junit(
-        FIXTURES
-        / "playwright_junit.xml"
-    )
+    results = parse_playwright_junit(FIXTURES / "playwright_junit.xml")
 
     matches = [
         item
         for item in results
-        if item["test_id"].endswith(
-            "› account remains unavailable"
-        )
+        if item["test_id"].endswith("› account remains unavailable")
     ]
 
     assert len(matches) == 1
@@ -192,34 +134,22 @@ def test_failed_retry_counts_once():
 
 
 def test_failed_retry_uses_final_retry_duration():
-    results = parse_playwright_junit(
-        FIXTURES
-        / "playwright_junit.xml"
-    )
+    results = parse_playwright_junit(FIXTURES / "playwright_junit.xml")
 
     result = next(
         item
         for item in results
-        if item["test_id"].endswith(
-            "› account remains unavailable"
-        )
+        if item["test_id"].endswith("› account remains unavailable")
     )
 
     assert result["duration_s"] == 0.7
 
 
 def test_missing_time_becomes_zero():
-    results = parse_playwright_junit(
-        FIXTURES
-        / "playwright_junit.xml"
-    )
+    results = parse_playwright_junit(FIXTURES / "playwright_junit.xml")
 
     result = next(
-        item
-        for item in results
-        if item["test_id"].endswith(
-            "› profile loads"
-        )
+        item for item in results if item["test_id"].endswith("› profile loads")
     )
 
     assert result["duration_s"] == 0.0
@@ -232,17 +162,13 @@ def test_missing_report_raises_error(
         PlaywrightAdapterError,
         match="does not exist",
     ):
-        parse_playwright_junit(
-            tmp_path / "missing.xml"
-        )
+        parse_playwright_junit(tmp_path / "missing.xml")
 
 
 def test_malformed_xml_raises_error(
     tmp_path,
 ):
-    report = (
-        tmp_path / "broken.xml"
-    )
+    report = tmp_path / "broken.xml"
 
     report.write_text(
         "<testsuites>",
@@ -253,17 +179,13 @@ def test_malformed_xml_raises_error(
         PlaywrightAdapterError,
         match="invalid Playwright JUnit XML",
     ):
-        parse_playwright_junit(
-            report
-        )
+        parse_playwright_junit(report)
 
 
 def test_missing_file_raises_error(
     tmp_path,
 ):
-    report = (
-        tmp_path / "missing-file.xml"
-    )
+    report = tmp_path / "missing-file.xml"
 
     report.write_text(
         """
@@ -281,17 +203,13 @@ def test_missing_file_raises_error(
         PlaywrightAdapterError,
         match="no usable file",
     ):
-        parse_playwright_junit(
-            report
-        )
+        parse_playwright_junit(report)
 
 
 def test_invalid_time_raises_error(
     tmp_path,
 ):
-    report = (
-        tmp_path / "bad-time.xml"
-    )
+    report = tmp_path / "bad-time.xml"
 
     report.write_text(
         """
@@ -310,30 +228,17 @@ def test_invalid_time_raises_error(
         PlaywrightAdapterError,
         match="invalid JUnit time",
     ):
-        parse_playwright_junit(
-            report
-        )
+        parse_playwright_junit(report)
 
 
 def test_split_playwright_test_id():
-    test_file, title = (
-        split_playwright_test_id(
-            (
-                "tests/checkout.spec.ts "
-                "› checkout succeeds"
-            )
-        )
+    test_file, title = split_playwright_test_id(
+        "tests/checkout.spec.ts › checkout succeeds"
     )
 
-    assert test_file == (
-        "tests/checkout.spec.ts"
-    )
+    assert test_file == ("tests/checkout.spec.ts")
 
-    assert title == (
-        "checkout succeeds"
-    )
-
-
+    assert title == ("checkout succeeds")
 
 
 def write_plan(
@@ -352,8 +257,7 @@ def write_plan(
                         "reason": "fixture",
                         "duration_s": 1.0,
                     }
-                    for test_id
-                    in test_ids
+                    for test_id in test_ids
                 ],
                 "skipped": [],
                 "catch_rate_estimate": 0.8,
@@ -366,123 +270,65 @@ def write_plan(
 def test_load_playwright_ids_preserves_plan_order(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     write_plan(
         plan,
         [
-            (
-                "tests/payment.spec.ts "
-                "› payment succeeds"
-            ),
-            (
-                "tests/checkout.spec.ts "
-                "› checkout succeeds"
-            ),
+            ("tests/payment.spec.ts › payment succeeds"),
+            ("tests/checkout.spec.ts › checkout succeeds"),
         ],
     )
 
-    selected = (
-        load_playwright_test_ids(
-            plan
-        )
-    )
+    selected = load_playwright_test_ids(plan)
 
     assert selected == [
-        (
-            "tests/payment.spec.ts "
-            "› payment succeeds"
-        ),
-        (
-            "tests/checkout.spec.ts "
-            "› checkout succeeds"
-        ),
+        ("tests/payment.spec.ts › payment succeeds"),
+        ("tests/checkout.spec.ts › checkout succeeds"),
     ]
 
 
 def test_pytest_ids_are_ignored(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     write_plan(
         plan,
         [
-            (
-                "tests/test_cart.py"
-                "::test_cart"
-            ),
-            (
-                "tests/cart.spec.ts "
-                "› cart works"
-            ),
+            ("tests/test_cart.py::test_cart"),
+            ("tests/cart.spec.ts › cart works"),
         ],
     )
 
-    selected = (
-        load_playwright_test_ids(
-            plan
-        )
-    )
+    selected = load_playwright_test_ids(plan)
 
-    assert selected == [
-        (
-            "tests/cart.spec.ts "
-            "› cart works"
-        )
-    ]
+    assert selected == [("tests/cart.spec.ts › cart works")]
 
 
 def test_invocations_group_tests_by_file(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     write_plan(
         plan,
         [
-            (
-                "tests/checkout.spec.ts "
-                "› checkout succeeds"
-            ),
-            (
-                "tests/payment.spec.ts "
-                "› payment succeeds"
-            ),
-            (
-                "tests/checkout.spec.ts "
-                "› checkout rejects card"
-            ),
+            ("tests/checkout.spec.ts › checkout succeeds"),
+            ("tests/payment.spec.ts › payment succeeds"),
+            ("tests/checkout.spec.ts › checkout rejects card"),
         ],
     )
 
-    invocations = (
-        build_playwright_invocations(
-            plan
-        )
-    )
+    invocations = build_playwright_invocations(plan)
 
     assert len(invocations) == 2
 
     assert invocations[0] == {
-        "file": (
-            "tests/checkout.spec.ts"
-        ),
+        "file": ("tests/checkout.spec.ts"),
         "test_ids": [
-            (
-                "tests/checkout.spec.ts "
-                "› checkout succeeds"
-            ),
-            (
-                "tests/checkout.spec.ts "
-                "› checkout rejects card"
-            ),
+            ("tests/checkout.spec.ts › checkout succeeds"),
+            ("tests/checkout.spec.ts › checkout rejects card"),
         ],
         "titles": [
             "checkout succeeds",
@@ -490,42 +336,25 @@ def test_invocations_group_tests_by_file(
         ],
     }
 
-    assert invocations[1][
-        "file"
-    ] == "tests/payment.spec.ts"
+    assert invocations[1]["file"] == "tests/payment.spec.ts"
 
 
 def test_invocation_file_order_uses_first_plan_occurrence(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     write_plan(
         plan,
         [
-            (
-                "tests/z.spec.ts "
-                "› z test"
-            ),
-            (
-                "tests/a.spec.ts "
-                "› a test"
-            ),
+            ("tests/z.spec.ts › z test"),
+            ("tests/a.spec.ts › a test"),
         ],
     )
 
-    invocations = (
-        build_playwright_invocations(
-            plan
-        )
-    )
+    invocations = build_playwright_invocations(plan)
 
-    assert [
-        item["file"]
-        for item in invocations
-    ] == [
+    assert [item["file"] for item in invocations] == [
         "tests/z.spec.ts",
         "tests/a.spec.ts",
     ]
@@ -534,14 +363,9 @@ def test_invocation_file_order_uses_first_plan_occurrence(
 def test_duplicate_playwright_id_is_removed(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
-    test_id = (
-        "tests/cart.spec.ts "
-        "› cart works"
-    )
+    test_id = "tests/cart.spec.ts › cart works"
 
     write_plan(
         plan,
@@ -551,15 +375,9 @@ def test_duplicate_playwright_id_is_removed(
         ],
     )
 
-    selected = (
-        load_playwright_test_ids(
-            plan
-        )
-    )
+    selected = load_playwright_test_ids(plan)
 
-    assert selected == [
-        test_id
-    ]
+    assert selected == [test_id]
 
 
 def test_missing_plan_raises_error(
@@ -569,17 +387,13 @@ def test_missing_plan_raises_error(
         PlaywrightAdapterError,
         match="does not exist",
     ):
-        load_playwright_test_ids(
-            tmp_path / "missing.json"
-        )
+        load_playwright_test_ids(tmp_path / "missing.json")
 
 
 def test_invalid_plan_json_raises_error(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     plan.write_text(
         "{not json",
@@ -590,17 +404,13 @@ def test_invalid_plan_json_raises_error(
         PlaywrightAdapterError,
         match="invalid TestBudget plan JSON",
     ):
-        load_playwright_test_ids(
-            plan
-        )
+        load_playwright_test_ids(plan)
 
 
 def test_plan_without_selected_raises_error(
     tmp_path,
 ):
-    plan = (
-        tmp_path / "plan.json"
-    )
+    plan = tmp_path / "plan.json"
 
     plan.write_text(
         "{}",
@@ -611,18 +421,13 @@ def test_plan_without_selected_raises_error(
         PlaywrightAdapterError,
         match="selected list",
     ):
-        load_playwright_test_ids(
-            plan
-        )
-
+        load_playwright_test_ids(plan)
 
 
 def test_repeated_testcase_entries_are_deduplicated(
     tmp_path,
 ):
-    report = (
-        tmp_path / "repeated.xml"
-    )
+    report = tmp_path / "repeated.xml"
 
     report.write_text(
         """
@@ -649,17 +454,12 @@ def test_repeated_testcase_entries_are_deduplicated(
         encoding="utf-8",
     )
 
-    results = parse_playwright_junit(
-        report
-    )
+    results = parse_playwright_junit(report)
 
     assert len(results) == 1
 
     assert results[0] == {
-        "test_id": (
-            "tests/cart.spec.ts "
-            "› cart works"
-        ),
+        "test_id": ("tests/cart.spec.ts › cart works"),
         "status": "passed",
         "duration_s": 0.6,
         "attempt": 2,

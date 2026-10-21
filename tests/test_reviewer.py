@@ -13,48 +13,23 @@ from testbudget.reviewer import (
 
 
 def test_write_permission_is_allowed():
-    assert (
-        has_write_permission(
-            "write"
-        )
-        is True
-    )
+    assert has_write_permission("write") is True
 
 
 def test_maintain_permission_is_allowed():
-    assert (
-        has_write_permission(
-            "maintain"
-        )
-        is True
-    )
+    assert has_write_permission("maintain") is True
 
 
 def test_admin_permission_is_allowed():
-    assert (
-        has_write_permission(
-            "admin"
-        )
-        is True
-    )
+    assert has_write_permission("admin") is True
 
 
 def test_read_permission_is_rejected():
-    assert (
-        has_write_permission(
-            "read"
-        )
-        is False
-    )
+    assert has_write_permission("read") is False
 
 
 def test_triage_permission_is_rejected():
-    assert (
-        has_write_permission(
-            "triage"
-        )
-        is False
-    )
+    assert has_write_permission("triage") is False
 
 
 def test_full_command_parses_for_writer():
@@ -134,57 +109,21 @@ def test_extra_command_arguments_are_rejected():
 
 def test_known_test_ids_preserve_first_seen_order():
     results = [
-        {
-            "test_id": (
-                "tests/test_cart.py"
-                "::test_cart"
-            )
-        },
-        {
-            "test_id": (
-                "tests/test_login.py"
-                "::test_login"
-            )
-        },
-        {
-            "test_id": (
-                "tests/test_cart.py"
-                "::test_cart"
-            )
-        },
+        {"test_id": ("tests/test_cart.py::test_cart")},
+        {"test_id": ("tests/test_login.py::test_login")},
+        {"test_id": ("tests/test_cart.py::test_cart")},
     ]
 
-    assert (
-        known_test_ids_from_results(
-            results
-        )
-        == [
-            (
-                "tests/test_cart.py"
-                "::test_cart"
-            ),
-            (
-                "tests/test_login.py"
-                "::test_login"
-            ),
-        ]
-    )
+    assert known_test_ids_from_results(results) == [
+        ("tests/test_cart.py::test_cart"),
+        ("tests/test_login.py::test_login"),
+    ]
 
 
 def test_known_requested_test_id_is_accepted():
-    known = [
-        (
-            "tests/test_cart.py"
-            "::test_cart"
-        )
-    ]
+    known = [("tests/test_cart.py::test_cart")]
 
-    requested = [
-        (
-            "tests/test_cart.py"
-            "::test_cart"
-        )
-    ]
+    requested = [("tests/test_cart.py::test_cart")]
 
     assert (
         validate_test_ids(
@@ -196,24 +135,14 @@ def test_known_requested_test_id_is_accepted():
 
 
 def test_unknown_requested_test_id_is_rejected():
-    known = [
-        (
-            "tests/test_cart.py"
-            "::test_cart"
-        )
-    ]
+    known = [("tests/test_cart.py::test_cart")]
 
     with pytest.raises(
         ReviewerCommandError,
         match="unknown test ID",
     ):
         validate_test_ids(
-            [
-                (
-                    "tests/test_unknown.py"
-                    "::test_unknown"
-                )
-            ],
+            [("tests/test_unknown.py::test_unknown")],
             known,
         )
 
@@ -221,56 +150,33 @@ def test_unknown_requested_test_id_is_rejected():
 def test_load_known_test_ids_from_history(
     tmp_path,
 ):
-    history = (
-        tmp_path / "history"
-    )
+    history = tmp_path / "history"
 
     history.mkdir()
 
     run = {
         "sha": "abc123",
-        "timestamp": (
-            "2026-10-21T10:00:00Z"
-        ),
+        "timestamp": ("2026-10-21T10:00:00Z"),
         "branch": "main",
         "changed_files": [],
     }
 
     result = {
         "sha": "abc123",
-        "test_id": (
-            "tests/test_cart.py"
-            "::test_cart"
-        ),
+        "test_id": ("tests/test_cart.py::test_cart"),
         "status": "passed",
         "duration_s": 1.0,
         "attempt": 1,
     }
 
-    (
-        history / "runs.jsonl"
-    ).write_text(
-        json.dumps(run)
-        + "\n",
+    (history / "runs.jsonl").write_text(
+        json.dumps(run) + "\n",
         encoding="utf-8",
     )
 
-    (
-        history / "results.jsonl"
-    ).write_text(
-        json.dumps(result)
-        + "\n",
+    (history / "results.jsonl").write_text(
+        json.dumps(result) + "\n",
         encoding="utf-8",
     )
 
-    assert (
-        load_known_test_ids(
-            history
-        )
-        == [
-            (
-                "tests/test_cart.py"
-                "::test_cart"
-            )
-        ]
-    )
+    assert load_known_test_ids(history) == [("tests/test_cart.py::test_cart")]

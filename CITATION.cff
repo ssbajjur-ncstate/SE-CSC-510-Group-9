@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use TestBudget, please cite it as below."
+title: "TestBudget: history-driven test selection under a CI time budget"
+type: software
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9"
+authors:
+  - given-names: Vedantt
+    family-names: Koul
+  - name: ssbajjur-ncstate
+  - given-names: Sakshi
+    family-names: Shelar
+  - given-names: Namrata
+    family-names: Joshi
