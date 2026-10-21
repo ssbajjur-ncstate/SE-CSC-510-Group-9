@@ -4,7 +4,9 @@ from hypothesis import strategies as st
 
 from testbudget.rules import (
     RuleContext,
+    apply_rotation_limit,
     changed_tests_next,
+    compute_skip_debt,
     file_of_test,
     ordered_shas,
     pin_first,
@@ -215,3 +217,77 @@ def test_bad_recent_failure_window_is_rejected(window):
 def test_negative_window_is_rejected_directly():
     with pytest.raises(ValueError, match="non-negative"):
         recently_failed([], [], window=-1)
+
+
+def test_skip_debt_counts_runs_since_the_test_last_ran():
+    runs = [make_run(f"r{day}", day) for day in range(1, 6)]
+    results = [
+        make_result("r1", "tests/test_a.py::test_one"),
+        make_result("r2", "tests/test_b.py::test_two", "skipped"),
+        make_result("r5", "tests/test_c.py::test_three", "failed"),
+        make_result("r1", "tests/test_c.py::test_three"),
+    ]
+    assert compute_skip_debt(runs, results) == {
+        "tests/test_a.py::test_one": 4,
+        "tests/test_b.py::test_two": 3,
+        "tests/test_c.py::test_three": 0,
+    }
+
+
+def test_skip_debt_of_empty_history_is_empty():
+    assert compute_skip_debt([], []) == {}
+
+
+def test_result_for_an_unknown_sha_is_ignored():
+    results = [make_result("ghost", "tests/test_a.py::test_one")]
+    assert compute_skip_debt([make_run("r1", 1)], results) == {}
+
+
+def test_test_at_the_rotation_limit_is_forced():
+    runs = [make_run(f"r{day}", day) for day in range(1, 5)]
+    results = [
+        make_result("r1", "tests/test_a.py::test_one"),
+        make_result("r4", "tests/test_b.py::test_two"),
+    ]
+    context = RuleContext(runs=runs, results=results, config={"rotation_limit": 3})
+    result = {test["test_name"]: test for test in apply_rotation_limit(RANKED, context)}
+    assert result["tests/test_a.py::test_one"]["skip_debt"] == 3
+    assert result["tests/test_a.py::test_one"]["forced"] is True
+    assert result["tests/test_b.py::test_two"]["forced"] is False
+    assert result["tests/test_c.py::test_three"]["skip_debt"] == 0
+    assert result["tests/test_c.py::test_three"]["forced"] is False
+
+
+def test_rotation_limit_keeps_the_ranked_order():
+    assert names(apply_rotation_limit(RANKED, RuleContext())) == names(RANKED)
+
+
+@pytest.mark.parametrize("limit", [0, -2, 1.5, "10", None])
+def test_bad_rotation_limit_is_rejected(limit):
+    context = RuleContext(config={"rotation_limit": limit})
+    with pytest.raises(ValueError, match="rotation_limit"):
+        apply_rotation_limit(RANKED, context)
+
+
+@given(
+    ids=test_ids,
+    limit=st.integers(min_value=1, max_value=8),
+    extra=st.integers(min_value=0, max_value=4),
+    data=st.data(),
+)
+def test_test_past_the_rotation_limit_is_always_forced(ids, limit, extra, data):
+    target = data.draw(st.sampled_from(ids))
+    others = [test_id for test_id in ids if test_id != target]
+    runs = [make_run(f"r{day:02d}", day) for day in range(1, limit + extra + 2)]
+    results = [make_result("r01", target)]
+    for run in runs[1:]:
+        ran = (
+            data.draw(st.lists(st.sampled_from(others), unique=True)) if others else []
+        )
+        results += [make_result(run["sha"], test_id) for test_id in ran]
+    ranked = [make_test(test_id) for test_id in ids]
+    context = RuleContext(runs=runs, results=results, config={"rotation_limit": limit})
+    forced = {
+        t["test_name"] for t in apply_rotation_limit(ranked, context) if t["forced"]
+    }
+    assert target in forced

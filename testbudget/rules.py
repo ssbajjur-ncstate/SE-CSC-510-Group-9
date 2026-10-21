@@ -227,3 +227,64 @@ def recent_failures_next(
     )
     failed = recently_failed(context.runs, context.results, window)
     return _promote(ranked, failed, "recent failure")
+
+
+DEFAULT_ROTATION_LIMIT = 10
+
+
+def compute_skip_debt(
+    runs: Iterable[Record], results: Iterable[Record]
+) -> dict[str, int]:
+    """
+    Return each test's skip debt: consecutive recent runs that did not run it.
+
+    A test is selectable from the first run it appears in, so its debt counts
+    the runs after the last run that has a result for it. Any result counts as
+    run, including ``skipped``, which the test runner reported, not TestBudget.
+    Args:
+        runs: Run records from the history contract.
+        results: Result records from the history contract; results for a sha
+            not in ``runs`` are ignored.
+    Returns:
+        Mapping of test ID to skip debt, sorted by test ID. Tests with no
+        result in history are absent and have no debt.
+    """
+    position = {sha: index for index, sha in enumerate(ordered_shas(runs))}
+    last_run: dict[str, int] = {}
+    for result in results:
+        index = position.get(result["sha"])
+        if index is not None:
+            test_id = result["test_id"]
+            last_run[test_id] = max(index, last_run.get(test_id, index))
+    newest = len(position) - 1
+    return {test_id: newest - last_run[test_id] for test_id in sorted(last_run)}
+
+
+def apply_rotation_limit(
+    ranked: Iterable[Mapping[str, Any]], context: RuleContext
+) -> list[RankedTest]:
+    """
+    Force in every test whose skip debt has reached the rotation limit.
+
+    Args:
+        ranked: Output of ``ranker.rank_tests``.
+        context: Rule context; reads ``runs``, ``results`` and
+            ``config["rotation_limit"]`` (N, default 10).
+    Returns:
+        New list in the same order. Every test gets ``skip_debt`` (0 if it
+        has no history) and ``forced``, which is True when
+        ``skip_debt >= N``. The budget cut must never drop a forced test.
+    Raises:
+        ValueError: If ``rotation_limit`` is not a positive integer.
+    """
+    limit = _non_negative_int(context.config, "rotation_limit", DEFAULT_ROTATION_LIMIT)
+    if limit == 0:
+        raise ValueError("rotation_limit must be a positive integer, got 0")
+    debt = compute_skip_debt(context.runs, context.results)
+    tests: list[RankedTest] = []
+    for test in ranked:
+        copy = dict(test)
+        copy["skip_debt"] = debt.get(copy["test_name"], 0)
+        copy["forced"] = copy["skip_debt"] >= limit
+        tests.append(copy)
+    return tests
