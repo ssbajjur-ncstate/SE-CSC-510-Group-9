@@ -14,3 +14,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `pyproject.toml` with a `testbudget` console script and a `dev` extra; install with `pip install -e ".[dev]"`.
 - `THIRD_PARTY_LIBRARIES.md` listing build and dev dependencies with their licences.
+- Nightly attribution (`testbudget/feedback.py`): PRs whose plan skipped a test that failed on nightly, ranked by link strength, with a miss record per missed test.
