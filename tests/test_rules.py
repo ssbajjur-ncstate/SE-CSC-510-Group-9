@@ -6,8 +6,11 @@ from testbudget.rules import (
     RuleContext,
     changed_tests_next,
     file_of_test,
+    ordered_shas,
     pin_first,
     pinned_tests,
+    recent_failures_next,
+    recently_failed,
 )
 
 
@@ -137,3 +140,78 @@ def test_source_only_change_leaves_the_order_unchanged():
 def test_changed_files_given_as_a_string_is_rejected():
     with pytest.raises(TypeError, match="list of paths"):
         changed_tests_next(RANKED, RuleContext(changed_files="tests/test_b.py"))
+
+
+def make_run(sha, day, changed_files=()):
+    return {
+        "sha": sha,
+        "timestamp": f"2026-10-{day:02d}T00:00:00Z",
+        "branch": "main",
+        "changed_files": list(changed_files),
+    }
+
+
+def make_result(sha, test_id, status="passed", attempt=1):
+    return {
+        "sha": sha,
+        "test_id": test_id,
+        "status": status,
+        "duration_s": 1.0,
+        "attempt": attempt,
+    }
+
+
+def test_runs_are_ordered_by_timestamp_not_file_order():
+    runs = [make_run("c", 3), make_run("a", 1), make_run("b", 2), make_run("a", 1)]
+    assert ordered_shas(runs) == ["a", "b", "c"]
+
+
+def test_only_failures_inside_the_window_count():
+    runs = [make_run(f"r{day}", day) for day in range(1, 5)]
+    results = [
+        make_result("r1", "tests/test_a.py::test_one", "failed"),
+        make_result("r3", "tests/test_b.py::test_two", "failed"),
+        make_result("r4", "tests/test_c.py::test_three", "passed"),
+    ]
+    assert recently_failed(runs, results, window=2) == {"tests/test_b.py::test_two"}
+    assert recently_failed(runs, results, window=4) == {
+        "tests/test_a.py::test_one",
+        "tests/test_b.py::test_two",
+    }
+    assert recently_failed(runs, results, window=0) == set()
+
+
+def test_failure_on_a_retried_attempt_still_counts():
+    runs = [make_run("r1", 1)]
+    results = [
+        make_result("r1", "tests/test_c.py::test_three", "failed", attempt=1),
+        make_result("r1", "tests/test_c.py::test_three", "passed", attempt=2),
+    ]
+    assert recently_failed(runs, results, window=1) == {"tests/test_c.py::test_three"}
+
+
+def test_recently_failed_test_moves_to_the_front():
+    runs = [make_run("r1", 1), make_run("r2", 2)]
+    results = [make_result("r2", "tests/test_c.py::test_three", "failed")]
+    context = RuleContext(
+        runs=runs, results=results, config={"recent_failure_window": 1}
+    )
+    result = recent_failures_next(RANKED, context)
+    assert names(result)[0] == "tests/test_c.py::test_three"
+    assert result[0]["rule"] == "recent failure"
+
+
+def test_empty_history_leaves_the_order_unchanged():
+    assert names(recent_failures_next(RANKED, RuleContext())) == names(RANKED)
+
+
+@pytest.mark.parametrize("window", [-1, 2.5, "3", True])
+def test_bad_recent_failure_window_is_rejected(window):
+    context = RuleContext(config={"recent_failure_window": window})
+    with pytest.raises(ValueError, match="recent_failure_window"):
+        recent_failures_next(RANKED, context)
+
+
+def test_negative_window_is_rejected_directly():
+    with pytest.raises(ValueError, match="non-negative"):
+        recently_failed([], [], window=-1)

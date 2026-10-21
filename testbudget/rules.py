@@ -148,3 +148,82 @@ def changed_tests_next(
         if file_of_test(test["test_name"]) in changed
     }
     return _promote(ranked, matches, "changed test file")
+
+
+DEFAULT_RECENT_FAILURE_WINDOW = 5
+
+
+def _non_negative_int(config: Mapping[str, Any], key: str, default: int) -> int:
+    """Return ``config[key]`` as a non-negative int, or ``default`` if absent."""
+    value = config.get(key, default)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{key} must be a non-negative integer, got {value!r}")
+    return value
+
+
+def ordered_shas(runs: Iterable[Record]) -> list[str]:
+    """
+    Return run shas from oldest to newest.
+
+    Args:
+        runs: Run records from the history contract.
+    Returns:
+        Shas sorted by ``(timestamp, sha)``; a sha recorded twice appears once.
+        Timestamps are ISO 8601 strings in one format, so they sort as text.
+    """
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for run in sorted(runs, key=lambda run: (run["timestamp"], run["sha"])):
+        if run["sha"] not in seen:
+            seen.add(run["sha"])
+            ordered.append(run["sha"])
+    return ordered
+
+
+def recently_failed(
+    runs: Iterable[Record], results: Iterable[Record], window: int
+) -> set[str]:
+    """
+    Return the tests that failed in any of the last ``window`` runs.
+
+    Args:
+        runs: Run records from the history contract.
+        results: Result records from the history contract.
+        window: Number of most recent runs to look at; 0 looks at none.
+    Returns:
+        Test IDs with a ``failed`` result, on any attempt, in those runs.
+    Raises:
+        ValueError: If ``window`` is negative.
+    """
+    if window < 0:
+        raise ValueError(f"window must be non-negative, got {window}")
+    shas = ordered_shas(runs)
+    recent = set(shas[len(shas) - window :]) if window else set()
+    return {
+        result["test_id"]
+        for result in results
+        if result["sha"] in recent and result.get("status") == "failed"
+    }
+
+
+def recent_failures_next(
+    ranked: Iterable[Mapping[str, Any]], context: RuleContext
+) -> list[RankedTest]:
+    """
+    Move tests that failed in the last K runs to the front.
+
+    Args:
+        ranked: Output of ``ranker.rank_tests``.
+        context: Rule context; reads ``runs``, ``results`` and
+            ``config["recent_failure_window"]`` (K, default 5).
+    Returns:
+        New list with recently failed tests first, in ranked order, tagged
+        ``rule="recent failure"``; the other tests follow in ranked order.
+    Raises:
+        ValueError: If ``recent_failure_window`` is not a non-negative integer.
+    """
+    window = _non_negative_int(
+        context.config, "recent_failure_window", DEFAULT_RECENT_FAILURE_WINDOW
+    )
+    failed = recently_failed(context.runs, context.results, window)
+    return _promote(ranked, failed, "recent failure")
