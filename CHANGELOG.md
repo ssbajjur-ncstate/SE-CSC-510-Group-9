@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added committed JSONL history files and SQLite history rebuilding.
 - Added LICENSE (MIT), CODE-OF-CONDUCT.md, INSTALL.md and EXTENSIONS.md.
 - Added migration from prototype SQLite history to committed JSONL history.
+- Added pytest xunit1/xunit2 history parsing and plan-driven test execution.
 
 ### Added
 
