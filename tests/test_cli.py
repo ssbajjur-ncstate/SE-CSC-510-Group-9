@@ -240,3 +240,66 @@ def test_links_without_report_flag_does_nothing(capsys):
 
     assert main(["links"]) == 1
     assert "Use --report" in capsys.readouterr().out
+
+
+def test_plan_writes_plan_json_with_forced_pin_on_fixtures(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    config_path = tmp_path / "testbudget.yml"
+    output_path = tmp_path / "plan.json"
+    config_path.write_text("pins:\n  - test_login_success\n", encoding="utf-8")
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(
+        [
+            "plan",
+            "--changed",
+            "src/checkout.py",
+            "--budget",
+            "0",
+            "--db",
+            str(db_path),
+            "--links",
+            "fixtures/test_links.json",
+            "--config",
+            str(config_path),
+            "--history",
+            "fixtures/history_small",
+            "--sha",
+            "abc123",
+            "--output",
+            str(output_path),
+        ]
+    )
+
+    assert exit_code == 0
+    plan = json.loads(output_path.read_text(encoding="utf-8"))
+    assert plan["sha"] == "abc123"
+    assert plan["risk_level"] in {"low", "medium", "high"}
+    assert [t["test_id"] for t in plan["selected"]] == ["test_login_success"]
+    assert all({"skip_reason", "skip_debt"} <= set(t) for t in plan["skipped"])
+
+
+def test_plan_rejects_malformed_config(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    config_path = tmp_path / "testbudget.yml"
+    config_path.write_text("pins: 3\n", encoding="utf-8")
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(
+        [
+            "plan",
+            "--changed",
+            "src/checkout.py",
+            "--budget",
+            "5",
+            "--db",
+            str(db_path),
+            "--links",
+            "fixtures/test_links.json",
+            "--config",
+            str(config_path),
+        ]
+    )
+
+    assert exit_code == 1
+    assert "pins must be" in capsys.readouterr().out

@@ -1,12 +1,18 @@
 import argparse
 from pathlib import Path
 
+import yaml
+
 from testbudget.db import (
+    HistoryFormatError,
     get_test_stats,
     init_db,
     insert_test_results,
+    load_history_records,
 )
 from testbudget.ingest import parse_junit
+from testbudget.plan import build_plan, plan_risk_level, write_plan
+from testbudget.rules import RuleContext
 
 DEFAULT_DB = "testbudget.db"
 DEFAULT_LINKS = "fixtures/test_links.json"
@@ -82,6 +88,25 @@ def build_parser():
         default=DEFAULT_LINKS,
         help=f"Test-link fixture path (default: {DEFAULT_LINKS})",
     )
+    plan_parser.add_argument(
+        "--config",
+        default="testbudget.yml",
+        help="TestBudget config with pins and rotation limit (default: testbudget.yml)",
+    )
+    plan_parser.add_argument(
+        "--history",
+        default="history",
+        help="Directory with runs.jsonl and results.jsonl (default: history)",
+    )
+    plan_parser.add_argument(
+        "--output",
+        help="Write plan.json in the shared plan contract to this path.",
+    )
+    plan_parser.add_argument(
+        "--sha",
+        default="HEAD",
+        help="Commit SHA recorded in plan.json (default: HEAD)",
+    )
     plan_parser.set_defaults(handler=handle_plan)
 
     links_parser = subparsers.add_parser(
@@ -146,7 +171,7 @@ def handle_plan(args):
     # Lazy imports allow init/ingest to work before M2 is merged.
     try:
         from testbudget.ranker import load_links, rank_tests
-        from testbudget.selector import select_with_budget
+        from testbudget.selector import select_with_rules
     except ImportError:
         print("Ranking subsystem is not available yet. Merge M2 before running plan.")
         return 1
@@ -176,21 +201,50 @@ def handle_plan(args):
     )
 
     try:
-        plan = select_with_budget(
-            ranked,
-            args.budget,
+        config = _load_config(args.config)
+        runs, results = _load_history(args.history)
+        context = RuleContext(
+            config=config,
+            changed_files=args.changed,
+            runs=runs,
+            results=results,
         )
-    except ValueError as exc:
+        plan = select_with_rules(ranked, args.budget, context)
+    except (ValueError, TypeError, HistoryFormatError) as exc:
         print(str(exc))
         return 1
+
+    if args.output:
+        risk = plan_risk_level(args.changed, runs, results)
+        write_plan(build_plan(args.sha, plan, risk, args.budget), args.output)
 
     print_plan(
         changed_files=args.changed,
         ranked_tests=ranked,
         plan=plan,
     )
+    if args.output:
+        print(f"Plan written: {args.output}")
 
     return 0
+
+
+def _load_config(path):
+    """Return the parsed config at ``path``, or {} if it does not exist."""
+    config_path = Path(path)
+    if not config_path.exists():
+        return {}
+    data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} must contain a mapping")
+    return data
+
+
+def _load_history(path):
+    """Return ``(runs, results)`` from a JSONL history dir, or empty lists."""
+    if not (Path(path) / "runs.jsonl").exists():
+        return [], []
+    return load_history_records(path)
 
 
 def print_plan(changed_files, ranked_tests, plan):
