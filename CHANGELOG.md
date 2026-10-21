@@ -13,3 +13,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `pyproject.toml` with a `testbudget` console script and a `dev` extra; install with `pip install -e ".[dev]"`.
 
+- `CONTRIBUTING.md` with workflow, coding standards and a worked link-source example, and `docs/ai-disclosure.md`.
