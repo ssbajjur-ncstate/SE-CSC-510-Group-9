@@ -10,12 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added docs/eval-protocol.md with the M0 hypothesis, baselines and metrics.
 - Add pull request template and issue templates (feature, bug, test-failure).
 - Added committed JSONL history files and SQLite history rebuilding.
+- Added migration from prototype SQLite history to committed JSONL history.
 
 ### Added
 
 - `pyproject.toml` with a `testbudget` console script and a `dev` extra; install with `pip install -e ".[dev]"`.
-
+- Pre-commit hooks (ruff, ruff-format, pytest), ruff `W` and `UP` rules, and strict mypy for `ranker`, `selector` and `riskmap`.
+- Risk map (`testbudget/riskmap.py`): file failure weights shrunk toward the global failure rate, a change risk score, and quantile risk levels.
 - `testbudget links --report` command summarising a links file by source.
 - `THIRD_PARTY_LIBRARIES.md` listing build and dev dependencies with their licences.
 - Nightly attribution (`testbudget/feedback.py`): PRs whose plan skipped a test that failed on nightly, ranked by link strength, with a miss record per missed test.
+- Baseline orderings for the replay evaluation, as defined in docs/eval-protocol.md: recently failed first, most often failed first, most recently modified first, and import-only (testbudget/baselines.py).
 - Budget calibration (`testbudget/calibrate.py`): per-risk-level budget fractions from the replay CSV, with floor, ceiling and upward inheritance for sparse levels, written into a generated block of `testbudget.yml`.
