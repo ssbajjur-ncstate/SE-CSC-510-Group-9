@@ -15,3 +15,10 @@ preserving the ability to detect failing runs. It summarizes available test
 history, evaluates test-selection strategies against baseline approaches, and
 reports when the available evidence is insufficient to justify a budget
 decision. Synthetic replay data is kept separate from observed historical data.
+
+## Publish to PyPI with a Trusted Publisher (from #64)
+
+v0.1.0 is tagged and archived on Zenodo, but the package is not on PyPI yet.
+
+- Needs: a PyPI project with a Trusted Publisher pointing at this repository, and a release workflow that builds the sdist and wheel and publishes on a version tag.
+- Done when: `pip install testbudget` installs the tagged version, and the README shows a PyPI version badge.
