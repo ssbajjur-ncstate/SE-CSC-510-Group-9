@@ -119,6 +119,31 @@ def build_parser():
         help="Print a summary of the links file.",
     )
     links_parser.add_argument(
+        "--build",
+        action="store_true",
+        help="Build links.json from imports, routes, co-failures and pins.",
+    )
+    links_parser.add_argument(
+        "--output",
+        default="links.json",
+        help="Where --build writes the links file (default: links.json)",
+    )
+    links_parser.add_argument(
+        "--root",
+        default=".",
+        help="Repository root scanned by --build (default: .)",
+    )
+    links_parser.add_argument(
+        "--history",
+        default="history",
+        help="JSONL history dir for co-failure links (default: history)",
+    )
+    links_parser.add_argument(
+        "--config",
+        default="testbudget.yml",
+        help="Config with pins for pin links (default: testbudget.yml)",
+    )
+    links_parser.add_argument(
         "--links",
         default=DEFAULT_LINKS,
         help=f"Path to the links file (default: {DEFAULT_LINKS})",
@@ -297,6 +322,35 @@ def print_plan(changed_files, ranked_tests, plan):
     )
 
 
+def build_links(root, history_dir, config_path):
+    """
+    Build the merged link map from every link source.
+
+    Args:
+        root: Repository root scanned for Python imports and Next.js routes.
+        history_dir: JSONL history directory for co-failure links; skipped
+            if it has no runs.jsonl.
+        config_path: ``testbudget.yml`` with pins; skipped if missing.
+    Returns:
+        ``{test_id: [{file, source, weight}]}`` merged across sources.
+    Raises:
+        ValueError: If the config or history is malformed.
+    """
+    from testbudget.links.cofail import build_cofail_links
+    from testbudget.links.imports import build_import_links
+    from testbudget.links.pins import build_pin_links
+    from testbudget.links.routes import build_route_links
+    from testbudget.links.writer import merge_links
+
+    root_path = Path(root)
+    sources = [build_import_links(root_path), build_route_links(root_path)[0]]
+    runs, results = _load_history(history_dir)
+    sources.append(build_cofail_links(list(runs), list(results)))
+    if Path(config_path).exists():
+        sources.append(build_pin_links(config_path))
+    return merge_links(*sources)
+
+
 def handle_links(args):
     from testbudget.links.report import (
         format_report,
@@ -304,8 +358,22 @@ def handle_links(args):
         summarize_links,
     )
 
+    if args.build:
+        try:
+            links = build_links(args.root, args.history, args.config)
+        except (ValueError, HistoryFormatError) as exc:
+            print(str(exc))
+            return 1
+        from testbudget.links.writer import write_links
+
+        write_links(links, args.output)
+        print(f"Links written: {args.output} ({len(links)} tests)")
+        if not args.report:
+            return 0
+        args.links = args.output
+
     if not args.report:
-        print("Nothing to do. Use --report.")
+        print("Nothing to do. Use --report or --build.")
         return 1
 
     try:
