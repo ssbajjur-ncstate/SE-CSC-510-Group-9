@@ -493,3 +493,35 @@ def test_plan_rejects_unauthorized_reviewer_override(tmp_path, capsys):
     exit_code = main(_plan_args(db_path, "--reviewer-comment", "/testbudget full"))
 
     assert exit_code == 1
+
+
+def test_migrate_moves_ingested_history_into_jsonl(tmp_path, capsys):
+    from testbudget.db import load_history_records
+
+    db_path = tmp_path / "legacy.db"
+    history_dir = tmp_path / "history"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(
+        ["migrate", "--db", str(db_path), "--history-dir", str(history_dir)]
+    )
+
+    assert exit_code == 0
+    runs, results = load_history_records(history_dir)
+    assert len(runs) == 1
+    assert len(results) == 5
+
+
+def test_migrate_rejects_missing_database(tmp_path, capsys):
+    exit_code = main(
+        [
+            "migrate",
+            "--db",
+            str(tmp_path / "missing.db"),
+            "--history-dir",
+            str(tmp_path / "history"),
+        ]
+    )
+
+    assert exit_code == 1
+    assert "Migration failed" in capsys.readouterr().err
