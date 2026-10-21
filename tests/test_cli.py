@@ -303,3 +303,63 @@ def test_plan_rejects_malformed_config(tmp_path, capsys):
 
     assert exit_code == 1
     assert "pins must be" in capsys.readouterr().out
+
+
+def test_links_build_writes_every_source_on_fixtures(tmp_path, capsys):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "pay.py").write_text("X = 1\n", encoding="utf-8")
+    (tmp_path / "tests").mkdir()
+    (tmp_path / "tests" / "test_pay.py").write_text(
+        "from src.pay import X\n\n\ndef test_charge():\n    assert X\n",
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "testbudget.yml"
+    config_path.write_text(
+        "pins:\n  tests/test_pay.py::test_charge: [src/pay.py]\n", encoding="utf-8"
+    )
+    output_path = tmp_path / "links.json"
+
+    exit_code = main(
+        [
+            "links",
+            "--build",
+            "--report",
+            "--root",
+            str(tmp_path),
+            "--history",
+            "fixtures/history_small",
+            "--config",
+            str(config_path),
+            "--output",
+            str(output_path),
+        ]
+    )
+
+    assert exit_code == 0
+    links = json.loads(output_path.read_text(encoding="utf-8"))
+    sources = {entry["source"] for entry in links["tests/test_pay.py::test_charge"]}
+    assert {"import", "cofail", "pin"} <= sources
+    assert "Links written" in capsys.readouterr().out
+
+
+def test_links_build_rejects_malformed_config(tmp_path, capsys):
+    config_path = tmp_path / "testbudget.yml"
+    config_path.write_text("pins: [a, b]\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "links",
+            "--build",
+            "--root",
+            str(tmp_path),
+            "--history",
+            str(tmp_path / "missing"),
+            "--config",
+            str(config_path),
+            "--output",
+            str(tmp_path / "links.json"),
+        ]
+    )
+
+    assert exit_code == 1
+    assert "pins must map" in capsys.readouterr().out
