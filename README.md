@@ -1,5 +1,12 @@
 # TestBudget
 
+<!-- badges -->
+[![CI: build and tests](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml)
+[![Style: ruff](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/lint.yml)
+[![Format: ruff](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/format.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/format.yml)
+[![Types: mypy](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/types.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/types.yml)
+<!-- /badges -->
+
 TestBudget is a prototype GitHub-oriented test planning tool that uses a repository's own test history to prioritize which existing tests should run for a code change under a time budget.
 
 ## Current Prototype

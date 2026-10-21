@@ -50,3 +50,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a retrospective for PR #6.
 - Document main-branch protection and pull-request workflow for M1.
 - Documented the risk-aware test-budget calibration track in EXTENSIONS.md.
+- README badges for CI, style, formatting and type checks, each linked to its workflow run, with separate lint, format and type workflows.
