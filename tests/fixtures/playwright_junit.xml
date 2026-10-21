@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<testsuites tests="6">
+
+    <testsuite
+        name="tests/checkout.spec.ts"
+        tests="4">
+
+        <testcase
+            classname="tests/checkout.spec.ts"
+            name="checkout succeeds"
+            time="1.2" />
+
+        <testcase
+            classname="tests/checkout.spec.ts"
+            name="invalid card is rejected"
+            time="1.6">
+
+            <failure
+                message="Expected payment rejection"
+                type="Error" />
+
+        </testcase>
+
+        <testcase
+            classname="tests/checkout.spec.ts"
+            name="coupon is optional"
+            time="0.4">
+
+            <skipped />
+
+        </testcase>
+
+        <testcase
+            classname="tests/checkout.spec.ts"
+            name="payment eventually succeeds"
+            time="0.8">
+
+            <flakyFailure
+                message="first attempt failed"
+                type="Error"
+                time="1.4" />
+
+        </testcase>
+
+    </testsuite>
+
+    <testsuite
+        name="tests/account.spec.ts"
+        tests="2">
+
+        <testcase
+            classname="tests/account.spec.ts"
+            name="account remains unavailable"
+            time="1.1">
+
+            <failure
+                message="first attempt failed"
+                type="Error" />
+
+            <rerunFailure
+                message="second attempt failed"
+                type="Error"
+                time="0.7" />
+
+        </testcase>
+
+        <testcase
+            classname="tests/account.spec.ts"
+            name="profile loads" />
+
+    </testsuite>
+
+</testsuites>
