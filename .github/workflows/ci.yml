@@ -25,7 +25,16 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Run tests
-        run: python -m pytest -q
+        run: python -m pytest -q --junitxml=junit-results.xml
+
+      - name: Upload JUnit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results
+          path: junit-results.xml
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Run Ruff
         run: python -m ruff check .
