@@ -20,7 +20,7 @@ Full test suites grow faster than CI budgets. Most pull requests touch a small p
 1. **History.** JUnit reports are ingested into committed JSONL history (`history/runs.jsonl`, `history/results.jsonl`) and a local SQLite cache.
 2. **Links.** `testbudget links --build` maps tests to source files from Python imports, Playwright routes, co-failures in history, and pins in `testbudget.yml`, and writes `links.json`.
 3. **Risk map.** Each changed file carries a failure weight from history; the change set's score is bucketed into `low`, `medium` or `high` risk.
-4. **Ranker.** Tests are scored by link to the change, past failures and runtime.
+4. **Ranker.** By default a greedy coverage ranker picks the test that covers the most risk-weighted, not-yet-covered changed files per second, so redundant tests sink; `--ranker baseline` scores by link, past failures and runtime instead.
 5. **Hard rules.** Pinned tests go first, then tests whose own file changed, then recent failures. Tests skipped too often (rotation limit) are forced in, and lockfile, CI-config, `.env`, tag and release changes force the full suite.
 6. **Budget cut.** Forced tests count against the budget but are never cut; the rest fill the budget in rank order.
 7. **plan.json.** The plan records the SHA, risk level, budget, selected tests with reasons, skipped tests with skip reason and skip debt, and an estimated catch rate.
