@@ -36,3 +36,28 @@ jobs:
         with:
           mode: ingest
           junit-path: junit.xml
+
+  external-caller:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out a stand-in external project
+        run: |
+          printf '[project]\nname = "dummy-project"\nversion = "0.0.1"\n' > pyproject.toml
+          git init -q .
+
+      - name: Check out the Action source in a subfolder
+        uses: actions/checkout@v4
+        with:
+          path: tbaction
+
+      - name: Run the Action from the external project
+        uses: ./tbaction
+        with:
+          mode: ingest
+          junit-path: tbaction/fixtures/sample_junit.xml
+
+      - name: Verify TestBudget was installed, not the caller
+        run: |
+          python -m pip show testbudget
+          if python -m pip show dummy-project; then echo "installed the caller by mistake"; exit 1; fi
+          python -m testbudget.cli --help
