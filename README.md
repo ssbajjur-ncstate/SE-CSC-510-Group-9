@@ -1,5 +1,6 @@
 # TestBudget
 
+[![DOI](https://zenodo.org/badge/1373423331.svg)](https://doi.org/10.5281/zenodo.23544345)
 [![CI](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml)
 [![Docs](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/docs.yml)
 [![coverage](https://raw.githubusercontent.com/ssbajjur-ncstate/SE-CSC-510-Group-9/badges/coverage.svg)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml)
