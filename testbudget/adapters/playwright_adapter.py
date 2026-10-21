@@ -292,7 +292,7 @@ def parse_playwright_junit(
 
     ordered_ids = []
     records = {}
-    occurrence_counts = {}
+    occurrence_counts: dict[str, int] = {}
 
     for testcase in root.iter("testcase"):
         record = _parse_playwright_testcase(testcase)

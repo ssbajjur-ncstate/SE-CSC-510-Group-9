@@ -210,7 +210,7 @@ def parse_pytest_junit(xml_path):
 
     root = tree.getroot()
 
-    attempts = {}
+    attempts: dict[str, int] = {}
     results = []
 
     for testcase in root.iter("testcase"):
@@ -392,7 +392,7 @@ def pytest_collection_modifyitems(
     except PytestAdapterError as error:
         raise pytest.UsageError(str(error)) from error
 
-    collected_by_id = {}
+    collected_by_id: dict[str, list[pytest.Item]] = {}
 
     for item in items:
         try:
