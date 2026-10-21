@@ -26,6 +26,7 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.10",
     "types-PyYAML",
+    "pre-commit>=3.5",
 ]
 
 [project.scripts]
@@ -56,7 +57,7 @@ line-length = 88
 extend-exclude = [".venv"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "SIM"]
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["testbudget"]
@@ -69,3 +70,18 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unused_configs = true
 no_implicit_optional = true
+
+# Strict mode for Member 1's modules. `strict` itself is global-only, so
+# the per-module flags it enables are listed here.
+[[tool.mypy.overrides]]
+module = ["testbudget.ranker", "testbudget.selector", "testbudget.riskmap"]
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+warn_return_any = true
+no_implicit_reexport = true
+strict_equality = true
+extra_checks = true

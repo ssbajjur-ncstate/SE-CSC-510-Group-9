@@ -30,6 +30,7 @@ Installed with `pip install -e ".[dev]"`.
 | [ruff](https://pypi.org/project/ruff/) | `>=0.6` | Linter and import sorter | [MIT](https://pypi.org/project/ruff/) |
 | [mypy](https://pypi.org/project/mypy/) | `>=1.10` | Static type checker | [MIT](https://pypi.org/project/mypy/) |
 | [types-PyYAML](https://pypi.org/project/types-PyYAML/) | any | Type stubs so `mypy testbudget` can check code that imports `yaml` | [Apache-2.0](https://pypi.org/project/types-PyYAML/) |
+| [pre-commit](https://pypi.org/project/pre-commit/) | `>=3.5` | Runs the ruff and pytest hooks in `.pre-commit-config.yaml` before each commit | [MIT](https://pypi.org/project/pre-commit/) |
 
 Hypothesis is the only copyleft (file-level, MPL-2.0) licence in the list. It is
 used only in the test suite and is not distributed with the package.
