@@ -419,3 +419,77 @@ def test_calibrate_rejects_floor_above_ceiling(tmp_path, capsys):
 
     assert exit_code == 1
     assert "floor and ceiling" in capsys.readouterr().out
+
+
+def _plan_args(db_path, *extra):
+    return [
+        "plan",
+        "--changed",
+        "src/checkout.py",
+        "--budget",
+        "2",
+        "--db",
+        str(db_path),
+        "--links",
+        "fixtures/test_links.json",
+        "--history",
+        "fixtures/history_small",
+        *extra,
+    ]
+
+
+def test_plan_audit_runs_every_test_but_keeps_the_plan(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    policy_path = tmp_path / "policy.json"
+    plan_path = tmp_path / "plan.json"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(
+        _plan_args(
+            db_path,
+            "--audit",
+            "--output",
+            str(plan_path),
+            "--policy-output",
+            str(policy_path),
+        )
+    )
+
+    assert exit_code == 0
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    assert policy["mode"] == "audit"
+    assert len(policy["execute_test_ids"]) == 5
+    assert len(plan["selected"]) < 5
+    assert "Execution mode: audit" in capsys.readouterr().out
+
+
+def test_plan_reviewer_full_override_runs_every_test(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    policy_path = tmp_path / "policy.json"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(
+        _plan_args(
+            db_path,
+            "--reviewer-comment",
+            "/testbudget full",
+            "--reviewer-permission",
+            "write",
+            "--policy-output",
+            str(policy_path),
+        )
+    )
+
+    assert exit_code == 0
+    policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    assert policy["mode"] == "reviewer_full"
+
+
+def test_plan_rejects_unauthorized_reviewer_override(tmp_path, capsys):
+    db_path = tmp_path / "testbudget.db"
+    assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
+
+    exit_code = main(_plan_args(db_path, "--reviewer-comment", "/testbudget full"))
+
+    assert exit_code == 1
