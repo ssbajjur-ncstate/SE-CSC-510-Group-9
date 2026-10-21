@@ -1,0 +1,95 @@
+name: TestBudget
+description: Plan which tests fit the budget, and record test results after the run.
+
+inputs:
+  mode:
+    description: "plan (before the tests) or ingest (after the tests)"
+    required: true
+  budget:
+    description: "Time budget in seconds (plan mode)"
+    required: false
+    default: "120"
+  base-ref:
+    description: "Base branch to diff against for changed files (plan mode)"
+    required: false
+    default: "main"
+  links:
+    description: "Path to the links file (plan mode)"
+    required: false
+    default: "fixtures/test_links.json"
+  junit-path:
+    description: "Path to the JUnit XML report (ingest mode)"
+    required: false
+    default: "junit.xml"
+  db:
+    description: "SQLite database path"
+    required: false
+    default: "testbudget.db"
+
+runs:
+  using: composite
+  steps:
+    - name: Check mode
+      shell: bash
+      run: |
+        if [ "${{ inputs.mode }}" != "plan" ] && [ "${{ inputs.mode }}" != "ingest" ]; then
+          echo "::error::mode must be 'plan' or 'ingest', got '${{ inputs.mode }}'"
+          exit 1
+        fi
+
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install TestBudget
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -e "${{ github.workspace }}"
+
+    - name: Restore history cache
+      if: inputs.mode == 'plan'
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ inputs.db }}
+        key: testbudget-history-${{ github.run_id }}
+        restore-keys: testbudget-history-
+
+    - name: Plan
+      if: inputs.mode == 'plan'
+      shell: bash
+      run: |
+        if [ ! -f "${{ inputs.db }}" ]; then
+          python -m testbudget.cli init --db "${{ inputs.db }}"
+        fi
+        git fetch origin "${{ inputs.base-ref }}" --depth=1 || true
+        args=()
+        while IFS= read -r f; do
+          [ -n "$f" ] && args+=(--changed "$f")
+        done < <(git diff --name-only "origin/${{ inputs.base-ref }}...HEAD" || true)
+        if [ ${#args[@]} -eq 0 ]; then
+          echo "No changed files found, nothing to plan."
+          exit 0
+        fi
+        # plan exits 1 when there is no history yet; that must not fail the build
+        python -m testbudget.cli plan "${args[@]}" \
+          --budget "${{ inputs.budget }}" \
+          --links "${{ inputs.links }}" \
+          --db "${{ inputs.db }}" \
+          || echo "::notice::No plan produced (no history yet?)."
+
+    - name: Ingest results
+      if: inputs.mode == 'ingest'
+      shell: bash
+      run: |
+        if [ ! -f "${{ inputs.db }}" ]; then
+          python -m testbudget.cli init --db "${{ inputs.db }}"
+        fi
+        python -m testbudget.cli ingest "${{ inputs.junit-path }}" --db "${{ inputs.db }}"
+
+    - name: Save history cache
+      if: inputs.mode == 'ingest'
+      uses: actions/cache/save@v4
+      with:
+        path: ${{ inputs.db }}
+        key: testbudget-history-${{ github.run_id }}
