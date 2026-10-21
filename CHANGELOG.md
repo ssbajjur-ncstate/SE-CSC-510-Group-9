@@ -36,3 +36,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hard rules (`testbudget/rules.py`): pinned tests first, changed test files next, recent failures next, a rotation limit from skip debt, and a full-suite trigger for lockfile, CI config, `.env`, tag and release changes.
 - Baseline orderings for the replay evaluation, as defined in docs/eval-protocol.md: recently failed first, most often failed first, most recently modified first, and import-only (testbudget/baselines.py).
 - Budget calibration (`testbudget/calibrate.py`): per-risk-level budget fractions from the replay CSV, with floor, ceiling and upward inheritance for sparse levels, written into a generated block of `testbudget.yml`.
+
+- Documented the risk-aware test-budget calibration track in EXTENSIONS.md.
