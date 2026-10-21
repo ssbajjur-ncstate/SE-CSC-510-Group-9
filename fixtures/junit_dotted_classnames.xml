@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+    <testsuite name="pytest" tests="4" failures="1">
+        <testcase classname="tests.test_ranker" name="test_empty_input" time="0.1" />
+        <testcase classname="tests.test_selector" name="test_empty_input" time="0.2">
+            <failure message="AssertionError">selector broke</failure>
+        </testcase>
+        <testcase classname="tests.test_rules.TestPins" name="test_pin_first" time="0.3" />
+        <testcase classname="tests.test_cli" file="tests/test_cli.py" name="test_main" time="0.4" />
+    </testsuite>
+</testsuites>

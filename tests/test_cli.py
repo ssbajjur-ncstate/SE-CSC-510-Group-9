@@ -83,9 +83,9 @@ def test_plan_prints_selected_and_skipped_tests(tmp_path, capsys):
         json.dumps(
             {
                 "src/checkout.py": [
-                    "test_checkout_success",
-                    "test_checkout_invalid_card",
-                    "test_payment_timeout",
+                    "tests/test_checkout.py::test_checkout_success",
+                    "tests/test_checkout.py::test_checkout_invalid_card",
+                    "tests/test_payment.py::test_payment_timeout",
                 ]
             }
         ),
@@ -131,7 +131,7 @@ def test_plan_prints_selected_and_skipped_tests(tmp_path, capsys):
     assert "SELECTED" in output
     assert "SKIPPED" in output
     assert "Estimated runtime" in output
-    assert "test_checkout_invalid_card" in output
+    assert "tests/test_checkout.py::test_checkout_invalid_card" in output
 
 
 def test_plan_rejects_empty_history(tmp_path, capsys):
@@ -248,7 +248,9 @@ def test_plan_writes_plan_json_with_forced_pin_on_fixtures(tmp_path, capsys):
     db_path = tmp_path / "testbudget.db"
     config_path = tmp_path / "testbudget.yml"
     output_path = tmp_path / "plan.json"
-    config_path.write_text("pins:\n  - test_login_success\n", encoding="utf-8")
+    config_path.write_text(
+        "pins:\n  - tests/test_login.py::test_login_success\n", encoding="utf-8"
+    )
     assert main(["ingest", FIXTURE, "--db", str(db_path)]) == 0
 
     exit_code = main(
@@ -277,7 +279,9 @@ def test_plan_writes_plan_json_with_forced_pin_on_fixtures(tmp_path, capsys):
     plan = json.loads(output_path.read_text(encoding="utf-8"))
     assert plan["sha"] == "abc123"
     assert plan["risk_level"] in {"low", "medium", "high"}
-    assert [t["test_id"] for t in plan["selected"]] == ["test_login_success"]
+    assert [t["test_id"] for t in plan["selected"]] == [
+        "tests/test_login.py::test_login_success"
+    ]
     assert all({"skip_reason", "skip_debt"} <= set(t) for t in plan["skipped"])
 
 
@@ -512,6 +516,7 @@ def test_migrate_moves_ingested_history_into_jsonl(tmp_path, capsys):
     runs, results = load_history_records(history_dir)
     assert len(runs) == 1
     assert len(results) == 5
+    assert "tests/test_cart.py::test_add_to_cart" in {r["test_id"] for r in results}
 
 
 def test_migrate_rejects_missing_database(tmp_path, capsys):
