@@ -1,9 +1,11 @@
 import pytest
+
 from testbudget.ranker import (
     get_linked_tests,
     rank_tests,
 )
 from testbudget.selector import select_with_budget
+
 
 def test_get_linked_tests():
     links = {
@@ -23,6 +25,7 @@ def test_get_linked_tests():
         "test_checkout",
         "test_payment",
     }
+
 
 def test_changed_test_ranks_above_unrelated_test():
     stats = [
@@ -52,6 +55,7 @@ def test_changed_test_ranks_above_unrelated_test():
     assert ranked[0]["test_name"] == "test_checkout"
     assert ranked[0]["linked_to_change"] is True
 
+
 def test_historical_failures_increase_score():
     stats = [
         {
@@ -74,6 +78,7 @@ def test_historical_failures_increase_score():
     )
     assert ranked[0]["test_name"] == "test_frequent_failure"
     assert ranked[0]["score"] > ranked[1]["score"]
+
 
 def test_selection_never_exceeds_budget():
     ranked = [
@@ -98,14 +103,12 @@ def test_selection_never_exceeds_budget():
         budget=10,
     )
     assert result["estimated_runtime"] <= 10
-    selected_names = {
-        test["test_name"]
-        for test in result["selected"]
-    }
+    selected_names = {test["test_name"] for test in result["selected"]}
     assert selected_names == {
         "test_a",
         "test_b",
     }
+
 
 def test_shorter_test_can_fit_after_large_test_is_skipped():
     ranked = [
@@ -129,14 +132,12 @@ def test_shorter_test_can_fit_after_large_test_is_skipped():
         ranked,
         budget=10,
     )
-    selected_names = [
-        test["test_name"]
-        for test in result["selected"]
-    ]
+    selected_names = [test["test_name"] for test in result["selected"]]
     assert selected_names == [
         "test_a",
         "test_small",
     ]
+
 
 def test_ranking_is_deterministic():
     stats = [
@@ -165,6 +166,7 @@ def test_ranking_is_deterministic():
     )
     assert first == second
     assert first[0]["test_name"] == "test_a"
+
 
 def test_negative_budget_is_rejected():
     with pytest.raises(ValueError):

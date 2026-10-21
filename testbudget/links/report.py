@@ -1,4 +1,5 @@
 """Summarise a links.json file for the ``testbudget links --report`` command."""
+
 from __future__ import annotations
 
 import json

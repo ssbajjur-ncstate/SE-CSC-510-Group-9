@@ -1,0 +1,7 @@
+{"sha": "a1", "test_id": "tests/test_pay.py::test_charge", "status": "failed", "duration_s": 1.5, "attempt": 1}
+{"sha": "a1", "test_id": "tests/test_ui.py::test_render", "status": "passed", "duration_s": 0.5, "attempt": 1}
+{"sha": "a2", "test_id": "tests/test_pay.py::test_charge", "status": "failed", "duration_s": 1.4, "attempt": 1}
+{"sha": "a2", "test_id": "tests/test_pay.py::test_charge", "status": "failed", "duration_s": 1.4, "attempt": 2}
+{"sha": "a3", "test_id": "tests/test_ui.py::test_render", "status": "passed", "duration_s": 0.6, "attempt": 1}
+{"sha": "a4", "test_id": "tests/test_ui.py::test_render", "status": "skipped", "duration_s": 0.0, "attempt": 1}
+{"sha": "a5", "test_id": "tests/test_ui.py::test_render", "status": "passed", "duration_s": 0.5, "attempt": 1}
