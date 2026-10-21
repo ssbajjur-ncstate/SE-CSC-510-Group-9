@@ -6,3 +6,4 @@
 - #63: Repository hygiene PR submitted. INSTALL.md and CODE_OF_CONDUCT.md added; LICENSE still pending team decision.
 - #50: CI workflow in progress. Added GitHub Actions workflow for pytest and Ruff; awaiting checks and review.
 - #16: Added retrospective notes for PR #6; PR pending.
+- #64: Added release and Zenodo setup guidance; integration still requires maintainer configuration.
