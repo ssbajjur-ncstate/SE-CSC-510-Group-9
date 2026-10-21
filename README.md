@@ -6,17 +6,13 @@
 [![Style: ruff](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/lint.yml)
 [![Format: ruff](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/format.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/format.yml)
 [![Types: mypy](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/types.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/types.yml)
-<!-- /badges -->
-
-TestBudget is a prototype GitHub-oriented test planning tool that uses a repository's own test history to prioritize which existing tests should run for a code change under a time budget.
-
 [![DOI](https://zenodo.org/badge/1373423331.svg)](https://doi.org/10.5281/zenodo.23544345)
-[![CI](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml)
 [![Docs](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/docs.yml)
 [![coverage](https://raw.githubusercontent.com/ssbajjur-ncstate/SE-CSC-510-Group-9/badges/coverage.svg)](https://github.com/ssbajjur-ncstate/SE-CSC-510-Group-9/actions/workflows/ci.yml)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![mypy](https://img.shields.io/badge/types-mypy-blue.svg)](https://mypy-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<!-- /badges -->
+
+TestBudget is a GitHub-oriented test planning tool that uses a repository's own test history to prioritize which existing tests should run for a code change under a time budget.
 
 ## Videos
 
