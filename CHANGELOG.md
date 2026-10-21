@@ -11,12 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added committed JSONL history files and SQLite history rebuilding.
 - Added LICENSE (MIT), CODE-OF-CONDUCT.md, INSTALL.md and EXTENSIONS.md.
 - Added migration from prototype SQLite history to committed JSONL history.
+- Added pytest xunit1/xunit2 history parsing and plan-driven test execution.
 
 ### Added
 
 - `pyproject.toml` with a `testbudget` console script and a `dev` extra; install with `pip install -e ".[dev]"`.
 
+
 - Link sources for the ranker: `links.json` writer, Python import links, co-failure links and pinned links (`testbudget/links/`).
+
+- Route links: resolve Playwright `page.goto` paths to Next.js route files (`testbudget/links/routes.py`).
+- 
 - `CONTRIBUTING.md` with workflow, coding standards and a worked link-source example, and `docs/ai-disclosure.md`.
 - Pre-commit hooks (ruff, ruff-format, pytest), ruff `W` and `UP` rules, and strict mypy for `ranker`, `selector` and `riskmap`.
 - Risk map (`testbudget/riskmap.py`): file failure weights shrunk toward the global failure rate, a change risk score, and quantile risk levels.
