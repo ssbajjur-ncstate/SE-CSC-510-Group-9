@@ -150,6 +150,26 @@ def build_parser():
     )
     links_parser.set_defaults(handler=handle_links)
 
+    calibrate_parser = subparsers.add_parser(
+        "calibrate",
+        help="Calibrate per-risk-level budgets from a replay CSV.",
+    )
+    calibrate_parser.add_argument(
+        "--replay",
+        required=True,
+        help="Replay CSV with sha, risk_level, budget_fraction, caught.",
+    )
+    calibrate_parser.add_argument(
+        "--output",
+        default="testbudget.yml",
+        help="Config file to write the budgets into (default: testbudget.yml)",
+    )
+    calibrate_parser.add_argument("--target", type=float, default=0.9)
+    calibrate_parser.add_argument("--floor", type=float, default=0.1)
+    calibrate_parser.add_argument("--ceiling", type=float, default=0.6)
+    calibrate_parser.add_argument("--min-failing-runs", type=int, default=10)
+    calibrate_parser.set_defaults(handler=handle_calibrate)
+
     return parser
 
 
@@ -384,6 +404,35 @@ def handle_links(args):
 
     print(format_report(summarize_links(links)))
 
+    return 0
+
+
+def handle_calibrate(args):
+    from testbudget.calibrate import (
+        CalibrationParams,
+        calibrate,
+        read_replay_csv,
+        write_calibration,
+    )
+
+    try:
+        params = CalibrationParams(
+            target_catch_rate=args.target,
+            floor=args.floor,
+            ceiling=args.ceiling,
+            min_failing_runs=args.min_failing_runs,
+        )
+        rows = read_replay_csv(args.replay)
+        budgets = calibrate(rows, params)
+        write_calibration(args.output, budgets, params)
+    except (FileNotFoundError, ValueError) as exc:
+        print(str(exc))
+        return 1
+
+    print("Calibrated budgets")
+    for level, budget in budgets.items():
+        print(f"{level}: {budget['budget_fraction']} ({budget['note']})")
+    print(f"Written: {args.output}")
     return 0
 
 
