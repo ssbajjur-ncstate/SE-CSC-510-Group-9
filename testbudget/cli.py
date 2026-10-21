@@ -84,6 +84,22 @@ def build_parser():
     )
     plan_parser.set_defaults(handler=handle_plan)
 
+    links_parser = subparsers.add_parser(
+        "links",
+        help="Inspect the link map between tests and source files.",
+    )
+    links_parser.add_argument(
+        "--report",
+        action="store_true",
+        help="Print a summary of the links file.",
+    )
+    links_parser.add_argument(
+        "--links",
+        default=DEFAULT_LINKS,
+        help=f"Path to the links file (default: {DEFAULT_LINKS})",
+    )
+    links_parser.set_defaults(handler=handle_links)
+
     return parser
 
 
@@ -225,6 +241,28 @@ def print_plan(changed_files, ranked_tests, plan):
     print(
         f"Estimated runtime: {plan['estimated_runtime']:.2f} / {plan['budget']:.2f} sec"
     )
+
+
+def handle_links(args):
+   from testbudget.links.report import (
+       format_report,
+       read_links_file,
+       summarize_links,
+   )
+
+   if not args.report:
+       print("Nothing to do. Use --report.")
+       return 1
+
+   try:
+       links = read_links_file(args.links)
+   except (FileNotFoundError, ValueError) as exc:
+       print(str(exc))
+       return 1
+
+   print(format_report(summarize_links(links)))
+
+   return 0
 
 
 def main(argv=None):
