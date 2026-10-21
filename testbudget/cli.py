@@ -230,7 +230,11 @@ def handle_ingest(args):
         print(f"JUnit file not found: {args.xml_path}")
         return 1
 
-    results = parse_junit(xml_path)
+    try:
+        results = parse_junit(xml_path)
+    except ValueError as exc:
+        print(f"Cannot ingest {args.xml_path}: {exc}")
+        return 1
 
     inserted = insert_test_results(
         args.db,
@@ -278,9 +282,8 @@ def handle_plan(args):
         print("No test history found. Run the ingest command before creating a plan.")
         return 1
 
-    links = load_links(links_path)
-
     try:
+        links = load_links(links_path)
         config = _load_config(args.config)
         runs, results = _load_history(args.history)
         if args.ranker == "baseline":
