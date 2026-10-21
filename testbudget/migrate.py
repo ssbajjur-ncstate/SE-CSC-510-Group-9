@@ -191,7 +191,7 @@ def read_legacy_history(db_path):
     finally:
         connection.close()
 
-    groups = {}
+    groups: dict[tuple[str, str | None], list[sqlite3.Row]] = {}
 
     for row in rows:
         created_at = row["created_at"]
