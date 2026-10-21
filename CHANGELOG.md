@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Risk map (`testbudget/riskmap.py`): file failure weights shrunk toward the global failure rate, a change risk score, and quantile risk levels.
 - `testbudget links --report` command summarising a links file by source.
 - `THIRD_PARTY_LIBRARIES.md` listing build and dev dependencies with their licences.
+- GitHub check-run payload builder with 50-annotation paging, token check and update-in-place publishing (`testbudget/github/checks.py`), with a fixture plan in `fixtures/plan.json`.
 
 - Nightly attribution (`testbudget/feedback.py`): PRs whose plan skipped a test that failed on nightly, ranked by link strength, with a miss record per missed test.
 
