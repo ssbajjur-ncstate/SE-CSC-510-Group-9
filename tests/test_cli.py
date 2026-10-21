@@ -363,3 +363,59 @@ def test_links_build_rejects_malformed_config(tmp_path, capsys):
 
     assert exit_code == 1
     assert "pins must map" in capsys.readouterr().out
+
+
+def test_calibrate_writes_budgets_from_replay_fixture(tmp_path, capsys):
+    output_path = tmp_path / "testbudget.yml"
+    output_path.write_text("pins: []\n", encoding="utf-8")
+
+    exit_code = main(
+        [
+            "calibrate",
+            "--replay",
+            "fixtures/replay_synthetic.csv",
+            "--output",
+            str(output_path),
+        ]
+    )
+
+    assert exit_code == 0
+    text = output_path.read_text(encoding="utf-8")
+    assert text.startswith("pins: []\n")
+    for level in ("low", "medium", "high"):
+        assert f"  {level}:" in text
+    assert "Calibrated budgets" in capsys.readouterr().out
+
+
+def test_calibrate_rejects_missing_replay_file(tmp_path, capsys):
+    exit_code = main(
+        [
+            "calibrate",
+            "--replay",
+            str(tmp_path / "missing.csv"),
+            "--output",
+            str(tmp_path / "testbudget.yml"),
+        ]
+    )
+
+    assert exit_code == 1
+    assert not (tmp_path / "testbudget.yml").exists()
+
+
+def test_calibrate_rejects_floor_above_ceiling(tmp_path, capsys):
+    exit_code = main(
+        [
+            "calibrate",
+            "--replay",
+            "fixtures/replay_synthetic.csv",
+            "--floor",
+            "0.9",
+            "--ceiling",
+            "0.5",
+            "--output",
+            str(tmp_path / "testbudget.yml"),
+        ]
+    )
+
+    assert exit_code == 1
+    assert "floor and ceiling" in capsys.readouterr().out
