@@ -4,8 +4,11 @@ import pytest
 
 from testbudget.adapters.pytest_adapter import (
     PytestAdapterError,
+    load_selected_test_ids,
     normalize_pytest_test_id,
     parse_pytest_junit,
+    pytest_collection_modifyitems,
+    pytest_item_to_test_id,
 )
 
 
@@ -311,3 +314,357 @@ def test_repeated_testcases_increment_attempt(
 
     assert results[0]["status"] == "failed"
     assert results[1]["status"] == "passed"
+
+class FakeItem:
+    """
+    Minimal pytest item used to test collection ordering.
+    """
+
+    def __init__(
+        self,
+        nodeid,
+    ):
+        self.nodeid = nodeid
+
+
+class FakeHook:
+    """
+    Capture items reported as deselected.
+    """
+
+    def __init__(self):
+        self.deselected = []
+
+    def pytest_deselected(
+        self,
+        items,
+    ):
+        self.deselected.extend(
+            items
+        )
+
+
+class FakeConfig:
+    """
+    Minimal pytest config used by adapter unit tests.
+    """
+
+    def __init__(
+        self,
+        plan_path,
+    ):
+        self.plan_path = plan_path
+        self.hook = FakeHook()
+
+    def getoption(
+        self,
+        name,
+    ):
+        assert (
+            name
+            == "--testbudget-plan"
+        )
+
+        return self.plan_path
+
+
+def write_plan(
+    path,
+    test_ids,
+):
+    path.write_text(
+        __import__("json").dumps(
+            {
+                "sha": "abc123",
+                "risk_level": "medium",
+                "budget_s": 10,
+                "selected": [
+                    {
+                        "test_id": test_id,
+                        "reason": "fixture",
+                        "duration_s": 1.0,
+                    }
+                    for test_id
+                    in test_ids
+                ],
+                "skipped": [],
+                "catch_rate_estimate": 0.8,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_load_selected_ids_preserves_plan_order(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    write_plan(
+        plan,
+        [
+            (
+                "tests/test_payment.py"
+                "::test_payment"
+            ),
+            (
+                "tests/test_checkout.py"
+                "::test_checkout"
+            ),
+        ],
+    )
+
+    selected = (
+        load_selected_test_ids(
+            plan
+        )
+    )
+
+    assert selected == [
+        (
+            "tests/test_payment.py"
+            "::test_payment"
+        ),
+        (
+            "tests/test_checkout.py"
+            "::test_checkout"
+        ),
+    ]
+
+
+def test_plan_ignores_non_pytest_ids(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    write_plan(
+        plan,
+        [
+            "tests/test_checkout.py::test_checkout",
+            "checkout.spec.ts › checkout works",
+        ],
+    )
+
+    selected = (
+        load_selected_test_ids(
+            plan
+        )
+    )
+
+    assert selected == [
+        (
+            "tests/test_checkout.py"
+            "::test_checkout"
+        )
+    ]
+
+
+def test_missing_plan_raises_error(
+    tmp_path,
+):
+    with pytest.raises(
+        PytestAdapterError,
+        match="does not exist",
+    ):
+        load_selected_test_ids(
+            tmp_path
+            / "missing.json"
+        )
+
+
+def test_invalid_plan_json_raises_error(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    plan.write_text(
+        "{bad json",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        PytestAdapterError,
+        match="invalid TestBudget plan JSON",
+    ):
+        load_selected_test_ids(
+            plan
+        )
+
+
+def test_plan_without_selected_raises_error(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    plan.write_text(
+        "{}",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        PytestAdapterError,
+        match="selected list",
+    ):
+        load_selected_test_ids(
+            plan
+        )
+
+
+def test_pytest_item_to_test_id_removes_class_component():
+    item = FakeItem(
+        (
+            "tests/test_cart.py"
+            "::TestCart"
+            "::test_add_item"
+        )
+    )
+
+    assert (
+        pytest_item_to_test_id(
+            item
+        )
+        == (
+            "tests/test_cart.py"
+            "::test_add_item"
+        )
+    )
+
+
+def test_collection_is_reordered_to_plan(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    write_plan(
+        plan,
+        [
+            (
+                "tests/test_payment.py"
+                "::test_payment"
+            ),
+            (
+                "tests/test_checkout.py"
+                "::test_checkout"
+            ),
+        ],
+    )
+
+    checkout = FakeItem(
+        "tests/test_checkout.py::test_checkout"
+    )
+
+    login = FakeItem(
+        "tests/test_login.py::test_login"
+    )
+
+    payment = FakeItem(
+        "tests/test_payment.py::test_payment"
+    )
+
+    items = [
+        checkout,
+        login,
+        payment,
+    ]
+
+    config = FakeConfig(
+        plan
+    )
+
+    pytest_collection_modifyitems(
+        config,
+        items,
+    )
+
+    assert items == [
+        payment,
+        checkout,
+    ]
+
+
+def test_tests_not_in_plan_are_deselected(
+    tmp_path,
+):
+    plan = (
+        tmp_path / "plan.json"
+    )
+
+    write_plan(
+        plan,
+        [
+            (
+                "tests/test_checkout.py"
+                "::test_checkout"
+            )
+        ],
+    )
+
+    checkout = FakeItem(
+        "tests/test_checkout.py::test_checkout"
+    )
+
+    login = FakeItem(
+        "tests/test_login.py::test_login"
+    )
+
+    items = [
+        login,
+        checkout,
+    ]
+
+    config = FakeConfig(
+        plan
+    )
+
+    pytest_collection_modifyitems(
+        config,
+        items,
+    )
+
+    assert items == [
+        checkout
+    ]
+
+    assert (
+        config.hook.deselected
+        == [login]
+    )
+
+
+def test_collection_unchanged_without_plan():
+    checkout = FakeItem(
+        "tests/test_checkout.py::test_checkout"
+    )
+
+    login = FakeItem(
+        "tests/test_login.py::test_login"
+    )
+
+    items = [
+        checkout,
+        login,
+    ]
+
+    config = FakeConfig(
+        None
+    )
+
+    pytest_collection_modifyitems(
+        config,
+        items,
+    )
+
+    assert items == [
+        checkout,
+        login,
+    ]

@@ -301,3 +301,244 @@ def parse_pytest_junit(xml_path):
         )
 
     return results
+
+def load_selected_test_ids(
+    plan_path,
+):
+    """
+    Read pytest test IDs selected by a TestBudget plan.
+
+    Args:
+        plan_path:
+            Path to `plan.json`.
+
+    Returns:
+        Selected pytest test IDs in plan order.
+
+    Raises:
+        PytestAdapterError:
+            If the plan file does not exist or has an invalid structure.
+    """
+
+    plan_path = Path(
+        plan_path
+    )
+
+    if not plan_path.exists():
+        raise PytestAdapterError(
+            f"TestBudget plan does not exist: {plan_path}"
+        )
+
+    try:
+        plan = json.loads(
+            plan_path.read_text(
+                encoding="utf-8"
+            )
+        )
+
+    except json.JSONDecodeError as error:
+        raise PytestAdapterError(
+            f"invalid TestBudget plan JSON: {plan_path}"
+        ) from error
+
+    if not isinstance(plan, dict):
+        raise PytestAdapterError(
+            "TestBudget plan must be a JSON object"
+        )
+
+    selected = plan.get(
+        "selected"
+    )
+
+    if not isinstance(selected, list):
+        raise PytestAdapterError(
+            "TestBudget plan must contain a selected list"
+        )
+
+    selected_ids = []
+    seen = set()
+
+    for index, entry in enumerate(
+        selected,
+        start=1,
+    ):
+        if not isinstance(entry, dict):
+            raise PytestAdapterError(
+                f"selected item {index} must be an object"
+            )
+
+        test_id = entry.get(
+            "test_id"
+        )
+
+        if (
+            not isinstance(test_id, str)
+            or not test_id.strip()
+        ):
+            raise PytestAdapterError(
+                f"selected item {index} has no valid test_id"
+            )
+
+        test_id = test_id.strip()
+
+        # This adapter only owns pytest identities.
+        # Playwright uses a different shared identity format.
+        if "::" not in test_id:
+            continue
+
+        if test_id not in seen:
+            selected_ids.append(
+                test_id
+            )
+
+            seen.add(
+                test_id
+            )
+
+    return selected_ids
+
+
+def pytest_item_to_test_id(item):
+    """
+    Convert a collected pytest item into TestBudget's `path::name` identity.
+
+    Pytest node IDs can contain class names:
+
+        tests/test_cart.py::TestCart::test_add
+
+    TestBudget's agreed identity is:
+
+        tests/test_cart.py::test_add
+    """
+
+    nodeid = str(
+        item.nodeid
+    ).replace(
+        "\\",
+        "/",
+    )
+
+    parts = nodeid.split(
+        "::"
+    )
+
+    if len(parts) < 2:
+        raise PytestAdapterError(
+            f"cannot normalize pytest nodeid: {nodeid}"
+        )
+
+    test_file = parts[0]
+    test_name = parts[-1]
+
+    return normalize_pytest_test_id(
+        test_file,
+        test_name,
+    )
+
+
+def pytest_addoption(parser):
+    """
+    Register TestBudget's pytest command-line options.
+    """
+
+    group = parser.getgroup(
+        "testbudget"
+    )
+
+    group.addoption(
+        "--testbudget-plan",
+        action="store",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Execute pytest tests selected by a TestBudget plan.json file."
+        ),
+    )
+
+
+def pytest_collection_modifyitems(
+    config,
+    items,
+):
+    """
+    Reorder and cut pytest collection using a TestBudget plan.
+
+    When `--testbudget-plan` is not supplied, collection is left unchanged.
+
+    When a plan is supplied:
+
+    1. selected pytest IDs are read in plan order;
+    2. collected items are mapped to TestBudget IDs;
+    3. matching items are reordered to plan order;
+    4. all remaining pytest items are reported as deselected.
+    """
+
+    plan_path = config.getoption(
+        "--testbudget-plan"
+    )
+
+    if not plan_path:
+        return
+
+    try:
+        selected_ids = (
+            load_selected_test_ids(
+                plan_path
+            )
+        )
+
+    except PytestAdapterError as error:
+        raise pytest.UsageError(
+            str(error)
+        ) from error
+
+    collected_by_id = {}
+
+    for item in items:
+        try:
+            test_id = (
+                pytest_item_to_test_id(
+                    item
+                )
+            )
+
+        except PytestAdapterError as error:
+            raise pytest.UsageError(
+                str(error)
+            ) from error
+
+        collected_by_id.setdefault(
+            test_id,
+            [],
+        ).append(
+            item
+        )
+
+    selected_items = []
+
+    for test_id in selected_ids:
+        selected_items.extend(
+            collected_by_id.get(
+                test_id,
+                [],
+            )
+        )
+
+    selected_item_ids = {
+        id(item)
+        for item in selected_items
+    }
+
+    deselected_items = [
+        item
+        for item in items
+        if id(item)
+        not in selected_item_ids
+    ]
+
+    if deselected_items:
+        config.hook.pytest_deselected(
+            items=deselected_items
+        )
+
+    items[:] = selected_items
