@@ -51,3 +51,21 @@ def test_read_valid_file(tmp_path):
     p = tmp_path / "links.json"
     p.write_text(json.dumps(LINKS))
     assert read_links_file(p) == LINKS
+
+
+def test_summarize_handles_plain_string_entries():
+    s = summarize_links({"t1": ["src/a.py", "src/b.py"]})
+    assert s["total_links"] == 2
+    assert s["by_source"] == {"unlabelled": 2}
+
+
+def test_summarize_skips_non_list_values():
+    s = summarize_links({"t1": "oops"})
+    assert s["tests_with_links"] == 0
+
+
+def test_read_non_object_json_raises(tmp_path):
+    p = tmp_path / "links.json"
+    p.write_text("[1, 2, 3]")
+    with pytest.raises(ValueError):
+        read_links_file(p)
