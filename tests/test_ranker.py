@@ -1,4 +1,6 @@
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 from testbudget.ranker import (
     get_linked_tests,
@@ -238,3 +240,23 @@ def test_result_has_rank_tests_shape():
 
 def test_empty_stats_give_empty_ranking():
     assert rank_tests_coverage([], ["a.py"], {"a.py": ["t"]}, {}) == []
+
+
+names = st.text(alphabet="abcdef", min_size=1, max_size=3)
+
+
+@given(
+    tests=st.dictionaries(names, st.floats(0, 5), max_size=6),
+    links=st.dictionaries(names, st.lists(names, max_size=4), max_size=4),
+    weights=st.dictionaries(names, st.floats(0, 1), max_size=4),
+)
+def test_coverage_ranking_is_deterministic(tests, links, weights):
+    stats = [
+        {"test_name": name, "failure_count": 0, "avg_duration": duration}
+        for name, duration in tests.items()
+    ]
+    changed = sorted(links)
+    first = rank_tests_coverage(stats, changed, links, weights)
+    second = rank_tests_coverage(list(reversed(stats)), changed[::-1], links, weights)
+    assert first == second
+    assert sorted(t["test_name"] for t in first) == sorted(tests)
