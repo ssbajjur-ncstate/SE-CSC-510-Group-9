@@ -15,6 +15,7 @@ The two recency baselines read optional fields from each stats entry:
 ``last_failed_at`` and ``last_modified_at`` (ISO date strings or numbers,
 newer is larger). Tests without the field are placed last.
 """
+
 from __future__ import annotations
 
 from testbudget.ranker import get_linked_tests
@@ -32,7 +33,9 @@ def _entry(test: dict, linked: bool, score: float, reason: str) -> dict:
     }
 
 
-def _finish(ordered: list[dict], linked: set[str], reasons: dict[str, str]) -> list[dict]:
+def _finish(
+    ordered: list[dict], linked: set[str], reasons: dict[str, str]
+) -> list[dict]:
     """Turn an ordered list of stats entries into ranked entries (top = highest score)."""
     total = len(ordered)
     return [
@@ -43,9 +46,13 @@ def _finish(ordered: list[dict], linked: set[str], reasons: dict[str, str]) -> l
 
 def _newest_first(stats: list[dict], field: str) -> list[dict]:
     """Order by ``field`` descending; tests lacking it come last. Ties break on name."""
-    have = sorted((t for t in stats if t.get(field) is not None), key=lambda t: t["test_name"])
+    have = sorted(
+        (t for t in stats if t.get(field) is not None), key=lambda t: t["test_name"]
+    )
     have.sort(key=lambda t: t[field], reverse=True)
-    lack = sorted((t for t in stats if t.get(field) is None), key=lambda t: t["test_name"])
+    lack = sorted(
+        (t for t in stats if t.get(field) is None), key=lambda t: t["test_name"]
+    )
     return have + lack
 
 
@@ -54,7 +61,9 @@ def rank_recently_failed(stats, changed_files, links):
     linked = get_linked_tests(changed_files, links)
     ordered = _newest_first(stats, "last_failed_at")
     reasons = {
-        t["test_name"]: "failed recently" if t.get("last_failed_at") is not None else "no failure on record"
+        t["test_name"]: "failed recently"
+        if t.get("last_failed_at") is not None
+        else "no failure on record"
         for t in ordered
     }
     return _finish(ordered, linked, reasons)
@@ -78,7 +87,9 @@ def rank_recently_modified(stats, changed_files, links):
     linked = get_linked_tests(changed_files, links)
     ordered = _newest_first(stats, "last_modified_at")
     reasons = {
-        t["test_name"]: "modified recently" if t.get("last_modified_at") is not None else "no modification date"
+        t["test_name"]: "modified recently"
+        if t.get("last_modified_at") is not None
+        else "no modification date"
         for t in ordered
     }
     return _finish(ordered, linked, reasons)
@@ -87,7 +98,9 @@ def rank_recently_modified(stats, changed_files, links):
 def rank_import_only(stats, changed_files, links):
     """Import-only: tests linked to a changed file first, no history used. Ties break on name."""
     linked = get_linked_tests(changed_files, links)
-    ordered = sorted(stats, key=lambda t: (t["test_name"] not in linked, t["test_name"]))
+    ordered = sorted(
+        stats, key=lambda t: (t["test_name"] not in linked, t["test_name"])
+    )
     reasons = {
         t["test_name"]: "import link" if t["test_name"] in linked else "not linked"
         for t in ordered
