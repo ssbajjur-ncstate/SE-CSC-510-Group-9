@@ -8,7 +8,10 @@ import yaml
 PIN_WEIGHT = 10.0
 
 
-def build_pin_links(config_path: str | Path, known_tests: set[str] | None = None) -> dict[str, list[dict]]:
+def build_pin_links(
+    config_path: str | Path,
+    known_tests: set[str] | None = None,
+) -> dict[str, list[dict]]:
     """Return pin links; raises ValueError for malformed yml or unknown test IDs."""
     try:
         config = yaml.safe_load(Path(config_path).read_text(encoding="utf-8")) or {}
@@ -21,5 +24,7 @@ def build_pin_links(config_path: str | Path, known_tests: set[str] | None = None
     for test_id, files in pins.items():
         if known_tests is not None and test_id not in known_tests:
             raise ValueError(f"pin refers to unknown test: {test_id}")
-        links[test_id] = [{"file": f, "source": "pin", "weight": PIN_WEIGHT} for f in files]
+        links[test_id] = [
+            {"file": f, "source": "pin", "weight": PIN_WEIGHT} for f in files
+        ]
     return links

@@ -13,7 +13,8 @@ def test_weights_scaled_to_max():
         {"sha": "s1", "test_id": "t", "status": "failed"},
         {"sha": "s2", "test_id": "t", "status": "failed"},
     ]
-    weights = {l["file"]: l["weight"] for l in build_cofail_links(RUNS, results)["t"]}
+    links = build_cofail_links(RUNS, results)["t"]
+    weights = {link["file"]: link["weight"] for link in links}
     assert weights == {"a.py": 1.0, "b.py": 0.5}
 
 
@@ -27,7 +28,8 @@ def test_retries_counted_once():
         {"sha": "s1", "test_id": "t", "status": "failed", "attempt": 1},
         {"sha": "s1", "test_id": "t", "status": "failed", "attempt": 2},
     ]
-    weights = {l["file"]: l["weight"] for l in build_cofail_links(RUNS, results)["t"]}
+    links = build_cofail_links(RUNS, results)["t"]
+    weights = {link["file"]: link["weight"] for link in links}
     assert weights == {"a.py": 1.0, "b.py": 1.0}
 
 
