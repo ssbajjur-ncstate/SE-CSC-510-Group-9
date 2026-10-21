@@ -1,0 +1,19 @@
+# Install once with `pre-commit install`; run on everything with
+# `pre-commit run --all-files`.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Bump with `pre-commit autoupdate`.
+    rev: v0.17.1
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: python -m pytest -q
+        language: system
+        types: [python]
+        pass_filenames: false

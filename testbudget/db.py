@@ -181,6 +181,7 @@ def get_test_stats(db_path):
 
     return stats
 
+
 class HistoryFormatError(ValueError):
     """
     Raised when a TestBudget history file violates the JSONL history contract.
@@ -253,8 +254,7 @@ def _read_jsonl(path):
 
             if not isinstance(record, dict):
                 raise HistoryFormatError(
-                    f"{path}:{line_number}: "
-                    "history row must be a JSON object"
+                    f"{path}:{line_number}: history row must be a JSON object"
                 )
 
             records.append(
@@ -277,14 +277,11 @@ def _require_fields(
     Validate that a history record contains all required fields.
     """
 
-    missing = sorted(
-        required_fields - record.keys()
-    )
+    missing = sorted(required_fields - record.keys())
 
     if missing:
         raise HistoryFormatError(
-            f"{path}:{line_number}: "
-            f"missing required fields: {', '.join(missing)}"
+            f"{path}:{line_number}: missing required fields: {', '.join(missing)}"
         )
 
 
@@ -311,43 +308,26 @@ def _validate_run_record(
 
     if not isinstance(sha, str) or not sha.strip():
         raise HistoryFormatError(
-            f"{path}:{line_number}: "
-            "sha must be a non-empty string"
+            f"{path}:{line_number}: sha must be a non-empty string"
         )
 
-    if (
-        not isinstance(timestamp, str)
-        or not timestamp.strip()
-    ):
+    if not isinstance(timestamp, str) or not timestamp.strip():
         raise HistoryFormatError(
-            f"{path}:{line_number}: "
-            "timestamp must be a non-empty string"
+            f"{path}:{line_number}: timestamp must be a non-empty string"
         )
 
-    if (
-        not isinstance(branch, str)
-        or not branch.strip()
-    ):
+    if not isinstance(branch, str) or not branch.strip():
         raise HistoryFormatError(
-            f"{path}:{line_number}: "
-            "branch must be a non-empty string"
+            f"{path}:{line_number}: branch must be a non-empty string"
         )
 
     if not isinstance(changed_files, list):
-        raise HistoryFormatError(
-            f"{path}:{line_number}: "
-            "changed_files must be a list"
-        )
+        raise HistoryFormatError(f"{path}:{line_number}: changed_files must be a list")
 
     for changed_file in changed_files:
-        if (
-            not isinstance(changed_file, str)
-            or not changed_file.strip()
-        ):
+        if not isinstance(changed_file, str) or not changed_file.strip():
             raise HistoryFormatError(
-                f"{path}:{line_number}: "
-                "changed_files must contain "
-                "non-empty strings"
+                f"{path}:{line_number}: changed_files must contain non-empty strings"
             )
 
 
@@ -375,27 +355,19 @@ def _validate_result_record(
 
     if not isinstance(sha, str) or not sha.strip():
         raise HistoryFormatError(
-            f"{path}:{line_number}: "
-            "sha must be a non-empty string"
+            f"{path}:{line_number}: sha must be a non-empty string"
         )
 
-    if (
-        not isinstance(test_id, str)
-        or not test_id.strip()
-    ):
+    if not isinstance(test_id, str) or not test_id.strip():
         raise HistoryFormatError(
-            f"{path}:{line_number}: "
-            "test_id must be a non-empty string"
+            f"{path}:{line_number}: test_id must be a non-empty string"
         )
 
     if status not in ALLOWED_RESULT_STATUSES:
-        allowed = ", ".join(
-            sorted(ALLOWED_RESULT_STATUSES)
-        )
+        allowed = ", ".join(sorted(ALLOWED_RESULT_STATUSES))
 
         raise HistoryFormatError(
-            f"{path}:{line_number}: "
-            f"status must be one of: {allowed}"
+            f"{path}:{line_number}: status must be one of: {allowed}"
         )
 
     if (
@@ -407,18 +379,12 @@ def _validate_result_record(
         or duration_s < 0
     ):
         raise HistoryFormatError(
-            f"{path}:{line_number}: "
-            "duration_s must be a non-negative number"
+            f"{path}:{line_number}: duration_s must be a non-negative number"
         )
 
-    if (
-        isinstance(attempt, bool)
-        or not isinstance(attempt, int)
-        or attempt < 1
-    ):
+    if isinstance(attempt, bool) or not isinstance(attempt, int) or attempt < 1:
         raise HistoryFormatError(
-            f"{path}:{line_number}: "
-            "attempt must be a positive integer"
+            f"{path}:{line_number}: attempt must be a positive integer"
         )
 
 
@@ -466,8 +432,7 @@ def load_history_records(
 
         if sha in known_shas:
             raise HistoryFormatError(
-                f"{runs_path}:{line_number}: "
-                f"duplicate run sha: {sha}"
+                f"{runs_path}:{line_number}: duplicate run sha: {sha}"
             )
 
         known_shas.add(sha)
@@ -484,8 +449,7 @@ def load_history_records(
 
         if sha not in known_shas:
             raise HistoryFormatError(
-                f"{results_path}:{line_number}: "
-                f"result references unknown sha: {sha}"
+                f"{results_path}:{line_number}: result references unknown sha: {sha}"
             )
 
         results.append(record)
@@ -507,16 +471,12 @@ def rebuild_history_db(
             An open in-memory connection containing `runs` and `results`.
     """
 
-    runs, results = load_history_records(
-        history_dir
-    )
+    runs, results = load_history_records(history_dir)
 
     connection = sqlite3.connect(":memory:")
     connection.row_factory = sqlite3.Row
 
-    connection.execute(
-        "PRAGMA foreign_keys = ON"
-    )
+    connection.execute("PRAGMA foreign_keys = ON")
 
     connection.execute(
         """
@@ -605,9 +565,7 @@ def get_history_test_stats(
         test_id, run_count, failure_count, avg_duration, and last_seen.
     """
 
-    connection = rebuild_history_db(
-        history_dir
-    )
+    connection = rebuild_history_db(history_dir)
 
     rows = connection.execute(
         """
