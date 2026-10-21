@@ -64,9 +64,7 @@ from testbudget.adapters.playwright_adapter import (
     parse_playwright_junit,
 )
 
-results = parse_playwright_junit(
-    "results.xml"
-)
+results = parse_playwright_junit("results.xml")
 ```
 
 A normal result looks like:
@@ -167,9 +165,7 @@ from testbudget.adapters.playwright_adapter import (
     build_playwright_invocations,
 )
 
-invocations = build_playwright_invocations(
-    "plan.json"
-)
+invocations = build_playwright_invocations("plan.json")
 ```
 
 Suppose the plan selects:

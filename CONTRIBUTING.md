@@ -61,6 +61,7 @@ VALID_SOURCES = {"import", "route", "cofail", "pin", "sibling"}
 
 ```python
 """Sibling links: tests/test_foo.py is linked to foo.py."""
+
 from __future__ import annotations
 
 from pathlib import Path

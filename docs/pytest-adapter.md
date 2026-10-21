@@ -38,9 +38,7 @@ Parse it:
 ```python
 from testbudget.adapters.pytest_adapter import parse_pytest_junit
 
-results = parse_pytest_junit(
-    "test-results.xml"
-)
+results = parse_pytest_junit("test-results.xml")
 ```
 
 A result looks like:
